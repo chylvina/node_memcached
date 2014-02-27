@@ -1,6 +1,39 @@
 /*global require console setTimeout process Buffer */
-var PORT = 6379;
-var HOST = '127.0.0.1';
+var PORT = 11211;
+var HOST = '10.232.4.25';
+var username = 'df15d29a97b211e3';
+var password = '123456_78a1A';
+
+var redis = require("./index");
+
+redis.debug_mode = true;
+
+var client = redis.createClient(PORT, HOST, {
+   username: username,
+    password: password
+});
+
+client.set('hello', 'hi hi hi', 100, function(err, data) {
+  if(err) {
+    console.log(err);
+    return;
+  }
+
+  console.log(data);
+});
+
+client.get('hello', function(err, data) {
+  if(err) {
+    console.log(err);
+    return;
+  }
+
+  console.log(data);
+});
+//client.auth(username, password);
+
+
+return;
 
 var redis = require("./index"),
     client = redis.createClient(PORT, HOST),
