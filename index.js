@@ -846,6 +846,12 @@ RedisClient.prototype.send_command = function (command, args, callback) {
 
     buffered_writes += !stream.write(buf);
   }
+  else if (command === "version") {
+    this.closing = true;
+    buf = makeRequestBuffer(protocol.opcode.VERSION, '', '', '', '');
+
+    buffered_writes += !stream.write(buf);
+  }
 
   else if (command === "append") {
     buf = makeRequestBuffer(protocol.opcode.APPEND, args[0], '', args[1].toString(), '');
@@ -1024,7 +1030,7 @@ function set_union(seta, setb) {
 }
 
 // This static list of commands is updated from time to time.  ./lib/commands.js can be updated with generate_commands.js
-commands = set_union(["get", "add", "set", "auth", "quit", "delete", "replace", "increment", "decrement", "append", "prepend", "noop"], require("./lib/commands"));
+commands = set_union(["get", "add", "set", "auth", "quit", "delete", "replace", "increment", "decrement", "append", "prepend", "noop", "version"], require("./lib/commands"));
 
 commands.forEach(function (fullCommand) {
   var command = fullCommand.split(' ')[0];

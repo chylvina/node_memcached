@@ -32,13 +32,13 @@ client.set('hello', 'world', function (err, data) {
   console.log('set success: ', data);
 });
 
-client.noop(function (err, data) {
+client.version(function (err, data) {
   if (err) {
-    console.log('noop error:', err);
+    console.log('version error:', err);
     return;
   }
 
-  console.log('noop success:', data);
+  console.log('version success:', data.val.toString());
 });
 
 client.get('hello', function (err, data) {
