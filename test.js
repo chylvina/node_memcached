@@ -23,60 +23,32 @@ var client = redis.createClient(PORT, HOST, {
  });*/
 
 
-client.add('add_test1', 'add_test_value', function (err, data) {
+client.set('hello', 1, function (err, data) {
   if (err) {
-    console.log('add error:', err);
+    console.log('set error:', err);
     return;
   }
 
-  console.log('add success: ', data);
+  console.log('set success: ', data);
 });
 
-client.get('add_test1', function (err, data) {
+client.quit(function (err, data) {
   if (err) {
-    console.log('get1 error:', err);
+    console.log('quit error:', err);
     return;
   }
 
-  console.log('get1 success:', data.val.toString());
+  console.log('quit success:', data);
 });
 
-client.get('add_test2', function (err, data) {
+client.get('hello', function (err, data) {
   if (err) {
-    console.log('get2 error:', err);
+    console.log('get error:', err);
     return;
   }
 
-  console.log('get2 success:', data.val.toString());
+  console.log('get success:', data.val.toString());
 });
-
-client.get('add_test3', function (err, data) {
-  if (err) {
-    console.log('get3 error:', err);
-    return;
-  }
-
-  console.log('get3 success:', data.val.toString());
-});
-
-client.get('add_test4', function (err, data) {
-  if (err) {
-    console.log('get4 error:', err);
-    return;
-  }
-
-  console.log('get4 success:', data.val.toString());
-});
-
-client.get('add_test5', function (err, data) {
-  if (err) {
-    console.log('get5 error:', err);
-    return;
-  }
-
-  console.log('get5 success:', data.val.toString());
-});
-
 
 //client.auth(username, password);
 

@@ -14,6 +14,7 @@ var net = require("net"),
 var protocol = require('./lib/memjs/protocol');
 var makeRequestBuffer = require('./lib/memjs/utils').makeRequestBuffer;
 var makeExpiration = require('./lib/memjs/utils').makeExpiration;
+var utils = require('./lib/memjs/utils');
 
 // can set this to true to enable for all connections
 exports.debug_mode = false;
@@ -828,6 +829,17 @@ RedisClient.prototype.send_command = function (command, args, callback) {
 
     buffered_writes += !stream.write(buf);
   }
+  else if (command === "delete") {
+    buf = makeRequestBuffer(protocol.opcode.DELETE, args[0], '', '', '');
+
+    buffered_writes += !stream.write(buf);
+  }
+  else if (command === "quit") {
+    this.closing = true;
+    buf = makeRequestBuffer(protocol.opcode.QUIT, '', '', '', '');
+
+    buffered_writes += !stream.write(buf);
+  }
   else if (command === "set") {
     extras = Buffer.concat([new Buffer('00000000', 'hex'),
       makeExpiration(args[2] || this.options.expires)]);
@@ -841,6 +853,28 @@ RedisClient.prototype.send_command = function (command, args, callback) {
       makeExpiration(args[2] || this.options.expires)]);
 
     buf = makeRequestBuffer(protocol.opcode.ADD, args[0], extras, args[1].toString(), '');
+
+    buffered_writes += !stream.write(buf);
+  }
+  else if (command === "replace") {
+    extras = Buffer.concat([new Buffer('00000000', 'hex'),
+      makeExpiration(args[2] || this.options.expires)]);
+
+    buf = makeRequestBuffer(protocol.opcode.REPLACE, args[0], extras, args[1].toString(), '');
+
+    buffered_writes += !stream.write(buf);
+  }
+  else if (command === "increment") {
+    extras = utils.makeAmountInitialAndExpiration(args[1], 0, (args[2] || this.options.expires));
+
+    buf = makeRequestBuffer(protocol.opcode.INCREMENT, args[0], extras, args[1].toString(), '');
+
+    buffered_writes += !stream.write(buf);
+  }
+  else if (command === "decrement") {
+    extras = utils.makeAmountInitialAndExpiration(args[1], 0, (args[2] || this.options.expires));
+
+    buf = makeRequestBuffer(protocol.opcode.DECREMENT, args[0], extras, args[1].toString(), '');
 
     buffered_writes += !stream.write(buf);
   }
@@ -972,7 +1006,7 @@ function set_union(seta, setb) {
 }
 
 // This static list of commands is updated from time to time.  ./lib/commands.js can be updated with generate_commands.js
-commands = set_union(["get", "add", "set", "auth"], require("./lib/commands"));
+commands = set_union(["get", "add", "set", "auth", "quit", "delete", "replace", "increment", "decrement"], require("./lib/commands"));
 
 commands.forEach(function (fullCommand) {
   var command = fullCommand.split(' ')[0];
