@@ -61,6 +61,9 @@ function RedisClient(stream, options) {
   if (options.connect_timeout && !isNaN(options.connect_timeout) && options.connect_timeout > 0) {
     this.connect_timeout = +options.connect_timeout;
   }
+  if (options.expires === undefined) {
+    options.expires = 0;
+  }
   this.enable_offline_queue = true;
   if (typeof this.options.enable_offline_queue === "boolean") {
     this.enable_offline_queue = this.options.enable_offline_queue;
@@ -92,26 +95,32 @@ function RedisClient(stream, options) {
   var self = this;
 
   this.stream.on("connect", function () {
+    console.log('event: connect');
     self.on_connect();
   });
 
   this.stream.on("data", function (buffer_from_socket) {
+    console.log('event: data');
     self.on_data(buffer_from_socket);
   });
 
   this.stream.on("error", function (msg) {
+    console.log('event: error');
     self.on_error(msg.message);
   });
 
   this.stream.on("close", function () {
+    console.log('event: close');
     self.connection_gone("close");
   });
 
   this.stream.on("end", function () {
+    console.log('event: end');
     self.connection_gone("end");
   });
 
   this.stream.on("drain", function () {
+    console.log('event: drain');
     self.should_buffer = false;
     self.emit("drain");
   });
