@@ -23,7 +23,7 @@ var client = redis.createClient(PORT, HOST, {
  });*/
 
 
-client.set('hello', 1, function (err, data) {
+client.set('hello', 'world', function (err, data) {
   if (err) {
     console.log('set error:', err);
     return;
@@ -32,13 +32,13 @@ client.set('hello', 1, function (err, data) {
   console.log('set success: ', data);
 });
 
-client.quit(function (err, data) {
+client.prepend('hello', '123', function (err, data) {
   if (err) {
-    console.log('quit error:', err);
+    console.log('append error:', err);
     return;
   }
 
-  console.log('quit success:', data);
+  console.log('append success:', data);
 });
 
 client.get('hello', function (err, data) {
