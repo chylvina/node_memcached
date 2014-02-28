@@ -32,13 +32,13 @@ client.set('hello', 'world', function (err, data) {
   console.log('set success: ', data);
 });
 
-client.prepend('hello', '123', function (err, data) {
+client.noop(function (err, data) {
   if (err) {
-    console.log('append error:', err);
+    console.log('noop error:', err);
     return;
   }
 
-  console.log('append success:', data);
+  console.log('noop success:', data);
 });
 
 client.get('hello', function (err, data) {
