@@ -1,4 +1,3 @@
-/*global Buffer require exports console setTimeout */
 
 var net = require("net"),
   util = require("./lib/util"),
@@ -11,7 +10,7 @@ var net = require("net"),
   default_port = 6379,
   default_host = "127.0.0.1";
 
-var protocol = require('./lib/memjs/protocol');
+var protocol = require('./protocol');
 var makeRequestBuffer = require('./lib/memjs/utils').makeRequestBuffer;
 var makeExpiration = require('./lib/memjs/utils').makeExpiration;
 var utils = require('./lib/memjs/utils');
@@ -24,16 +23,6 @@ function trace() {
   if (!exports.debug_mode) return;
   console.log.apply(null, arraySlice.call(arguments))
 }
-
-// hiredis might not be installed
-/*try {
- require("./lib/parser/hiredis");
- parsers.push(require("./lib/parser/hiredis"));
- } catch (err) {
- if (exports.debug_mode) {
- console.warn("hiredis parser not installed.");
- }
- }*/
 
 parsers.push(require("./lib/parser/javascript"));
 
@@ -215,29 +204,17 @@ RedisClient.prototype.do_auth = function () {
   self.send_anyway = true;
   self.send_command("auth", [this.auth_username, this.auth_pass], function (err, res) {
     if (err) {
-      if (err.toString().match("LOADING")) {
-        // if redis is still loading the db, it will not authenticate and everything else will fail
-        console.log("Redis still loading, trying to authenticate later");
-        setTimeout(function () {
-          self.do_auth();
-        }, 2000); // TODO - magic number alert
-        return;
-      } else if (err.toString().match("no password is set")) {
-        console.log("Warning: Redis server does not require a password, but a password was supplied.")
-        err = null;
-        res = "OK";
-      } else {
-        return self.emit("error", new Error("Auth error: " + err.message));
-      }
+      return self.emit("error", new Error("Auth error: the status code: " + err.header.status));
     }
 
     if (res.header.status !== protocol.status.SUCCESS) {
-      return self.emit("error", new Error("Auth failed: " + res.status));
+      return self.emit("error", new Error("Auth failed: the status code: " + res.header.status));
     }
 
     if (exports.debug_mode) {
       console.log("Auth succeeded " + self.host + ":" + self.port + " id " + self.connection_id);
     }
+
     if (self.auth_callback) {
       self.auth_callback(err, res);
       self.auth_callback = null;
@@ -553,7 +530,7 @@ RedisClient.prototype.return_error = function (err) {
 function try_callback(client, callback, reply) {
   if(protocol.status.SUCCESS !== reply.header.status) {
     try {
-      callback(reply.header.status);
+      callback(reply);
     }
     catch(err) {
       if (process.domain) {
@@ -907,54 +884,6 @@ RedisClient.prototype.send_command = function (command, args, callback) {
     console.log("send " + this.host + ":" + this.port + " id " + this.connection_id + ": " + command_str);
   }
 
-  /*command_str = "*" + elem_count + "\r\n$" + command.length + "\r\n" + command + "\r\n";
-
-   if (! buffer_args) { // Build up a string and send entire command in one write
-   for (i = 0, il = args.length, arg; i < il; i += 1) {
-   arg = args[i];
-   if (typeof arg !== "string") {
-   arg = String(arg);
-   }
-   command_str += "$" + Buffer.byteLength(arg) + "\r\n" + arg + "\r\n";
-   }
-   if (exports.debug_mode) {
-   console.log("send " + this.host + ":" + this.port + " id " + this.connection_id + ": " + command_str);
-   }
-   buffered_writes += !stream.write(command_str);
-   } else {
-   if (exports.debug_mode) {
-   console.log("send command (" + command_str + ") has Buffer arguments");
-   }
-   buffered_writes += !stream.write(command_str);
-
-   for (i = 0, il = args.length, arg; i < il; i += 1) {
-   arg = args[i];
-   if (!(Buffer.isBuffer(arg) || arg instanceof String)) {
-   arg = String(arg);
-   }
-
-   if (Buffer.isBuffer(arg)) {
-   if (arg.length === 0) {
-   if (exports.debug_mode) {
-   console.log("send_command: using empty string for 0 length buffer");
-   }
-   buffered_writes += !stream.write("$0\r\n\r\n");
-   } else {
-   buffered_writes += !stream.write("$" + arg.length + "\r\n");
-   buffered_writes += !stream.write(arg);
-   buffered_writes += !stream.write("\r\n");
-   if (exports.debug_mode) {
-   console.log("send_command: buffer send " + arg.length + " bytes");
-   }
-   }
-   } else {
-   if (exports.debug_mode) {
-   console.log("send_command: string send " + Buffer.byteLength(arg) + " bytes: " + arg);
-   }
-   buffered_writes += !stream.write("$" + Buffer.byteLength(arg) + "\r\n" + arg + "\r\n");
-   }
-   }
-   }*/
   if (exports.debug_mode) {
     console.log("send_command buffered_writes: " + buffered_writes, " should_buffer: " + this.should_buffer);
   }
@@ -1030,7 +959,7 @@ function set_union(seta, setb) {
 }
 
 // This static list of commands is updated from time to time.  ./lib/commands.js can be updated with generate_commands.js
-commands = set_union(["get", "add", "set", "auth", "quit", "delete", "replace", "increment", "decrement", "append", "prepend", "noop", "version"], require("./lib/commands"));
+commands = ["get", "add", "set", "auth", "quit", "delete", "replace", "increment", "decrement", "append", "prepend", "noop", "version"];
 
 commands.forEach(function (fullCommand) {
   var command = fullCommand.split(' ')[0];
@@ -1288,3 +1217,5 @@ exports.print = function (err, reply) {
     console.log("Reply: " + reply);
   }
 };
+
+exports.protocol = protocol;

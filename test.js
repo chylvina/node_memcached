@@ -4,6 +4,7 @@ var HOST = '10.232.4.25';
 var username = 'df15d29a97b211e3';
 var password = '123456_78a1A';
 
+var assert = require("assert");
 var redis = require("./index");
 
 redis.debug_mode = true;
@@ -13,44 +14,264 @@ var client = redis.createClient(PORT, HOST, {
   password: password
 });
 
-/*client.set('hello', 'hi hi hi', 100, function(err, data) {
- if(err) {
- console.log(err);
- return;
- }
-
- console.log(data);
- });*/
-
-
+/// set test
 client.set('hello', 'world', function (err, data) {
-  if (err) {
-    console.log('set error:', err);
-    return;
-  }
+  assert.ok(err == null);
 
-  console.log('set success: ', data);
+  assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+  assert.ok(data.header.opcode == redis.protocol.opcode.SET);
 });
 
-client.version(function (err, data) {
-  if (err) {
-    console.log('version error:', err);
-    return;
-  }
-
-  console.log('version success:', data.val.toString());
-});
-
+// get test
 client.get('hello', function (err, data) {
-  if (err) {
-    console.log('get error:', err);
-    return;
-  }
+  assert.ok(err == null);
 
-  console.log('get success:', data.val.toString());
+  assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+  assert.ok(data.header.opcode == redis.protocol.opcode.GET);
+  assert.ok(data.val.toString() == "world");
 });
 
-//client.auth(username, password);
+// set expiration
+client.set('set expiration test', 'set value', 5, function (err, data) {
+  assert.ok(err == null);
+
+  assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+  assert.ok(data.header.opcode == redis.protocol.opcode.SET);
+
+  setTimeout(function() {
+    client.get('set expiration test', function (err, data) {
+      assert.ok(err != null);
+
+      assert.ok(err.header.status == redis.protocol.status.KEY_ENOENT);
+    });
+  }, 6 *1000);
+});
+
+/// version test
+client.version(function (err, data) {
+  assert.ok(err == null);
+
+  assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+  assert.ok(data.header.opcode == redis.protocol.opcode.VERSION);
+});
+
+
+/// add test
+var temp1 = (new Date).getTime();
+client.add(temp1, 'add test value', function (err, data) {
+  assert.ok(err == null);
+
+  assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+  assert.ok(data.header.opcode == redis.protocol.opcode.ADD);
+});
+
+// add duplicate error test
+client.add('hello', 'world', function (err, data) {
+  assert.ok(err != null);
+
+  assert.ok(err.header.status == redis.protocol.status.KEY_EEXISTS);
+  assert.ok(err.header.opcode == redis.protocol.opcode.ADD);
+});
+
+// add expiration test
+temp1 += 'delta';
+client.add(temp1, 'add test value', 5, function (err, data) {
+  console.log(err);
+  assert.ok(err == null);
+
+  assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+  assert.ok(data.header.opcode == redis.protocol.opcode.ADD);
+
+  setTimeout(function() {
+    client.get(temp1, function (err, data) {
+      assert.ok(err == null);
+
+      assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+      assert.ok(data.header.opcode == redis.protocol.opcode.GET);
+      assert.ok(data.val.toString() == "add test value");
+    });
+  }, 1000);
+
+  setTimeout(function() {
+    client.get(temp1, function (err, data) {
+      assert.ok(err != null);
+
+      assert.ok(err.header.status == redis.protocol.status.KEY_ENOENT);
+    });
+  }, 6 *1000);
+});
+
+/// replace test
+var temp2 = (new Date).getTime() + 'replace';
+
+client.replace(temp2, 'replace test value', function (err, data) {
+  assert.ok(err != null);
+
+  assert.ok(err.header.status == redis.protocol.status.KEY_ENOENT);
+  assert.ok(err.header.opcode == redis.protocol.opcode.REPLACE);
+});
+
+client.set(temp2, 'replace test value', function (err, data) {
+  assert.ok(err == null);
+
+  assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+  assert.ok(data.header.opcode == redis.protocol.opcode.SET);
+
+  client.replace(temp2, 'replace test new value', 5, function (err, data) {
+    assert.ok(err == null);
+
+    assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+    assert.ok(data.header.opcode == redis.protocol.opcode.REPLACE);
+
+    client.get(temp2, function(err, data) {
+      assert.ok(err == null);
+
+      assert.ok(data.val.toString() == 'replace test new value');
+    });
+
+    setTimeout(function() {
+      client.get(temp2, function(err, data) {
+        assert.ok(err != null);
+
+        assert.ok(err.header.status == redis.protocol.status.KEY_ENOENT);
+      });
+    }, 6 * 1000);
+  });
+});
+
+/// delete test
+client.set('delete test', 'delete test value', function (err, data) {
+  assert.ok(err == null);
+
+  assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+  assert.ok(data.header.opcode == redis.protocol.opcode.SET);
+
+  client.delete('delete test', function (err, data) {
+    assert.ok(err == null);
+
+    assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+    assert.ok(data.header.opcode == redis.protocol.opcode.DELETE);
+  });
+});
+
+/// append test
+client.set('append test', 'append test value', function (err, data) {
+  assert.ok(err == null);
+
+  assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+  assert.ok(data.header.opcode == redis.protocol.opcode.SET);
+
+  client.append('append test', 'append', function (err, data) {
+    assert.ok(err == null);
+
+    assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+    assert.ok(data.header.opcode == redis.protocol.opcode.APPEND);
+
+    client.get('append test', function (err, data) {
+      assert.ok(err == null);
+
+      assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+      assert.ok(data.header.opcode == redis.protocol.opcode.GET);
+      assert.ok(data.val.toString() == "append test valueappend");
+    });
+  });
+});
+
+/// prepend test
+client.set('prepend test', 'prepend test value', function (err, data) {
+  assert.ok(err == null);
+
+  assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+  assert.ok(data.header.opcode == redis.protocol.opcode.SET);
+
+  client.prepend('prepend test', 'prepend', function (err, data) {
+    assert.ok(err == null);
+
+    assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+    assert.ok(data.header.opcode == redis.protocol.opcode.PREPEND);
+
+    client.get('prepend test', function (err, data) {
+      assert.ok(err == null);
+
+      assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+      assert.ok(data.header.opcode == redis.protocol.opcode.GET);
+      assert.ok(data.val.toString() == "prependprepend test value");
+    });
+  });
+});
+
+
+/// increment test
+client.set('increment test', 1, function (err, data) {
+  assert.ok(err == null);
+
+  assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+  assert.ok(data.header.opcode == redis.protocol.opcode.SET);
+
+  client.increment('increment test', 5, 5, function (err, data) {
+    assert.ok(err == null);
+
+    assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+    assert.ok(data.header.opcode == redis.protocol.opcode.INCREMENT);
+
+    client.get('increment test', function (err, data) {
+      assert.ok(err == null);
+
+      assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+      assert.ok(data.header.opcode == redis.protocol.opcode.GET);
+      assert.ok(data.val.toString() == 6);
+    });
+
+    setTimeout(function() {
+      client.get('increment test', function (err, data) {
+        assert.ok(err != null);
+
+        assert.ok(err.header.status == redis.protocol.status.KEY_ENOENT);
+        assert.ok(err.header.opcode == redis.protocol.opcode.GET);
+      });
+    }, 6 * 1000);
+
+  });
+});
+
+/// decrement test
+client.set('decrement test', 9, function (err, data) {
+  assert.ok(err == null);
+
+  assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+  assert.ok(data.header.opcode == redis.protocol.opcode.SET);
+
+  client.decrement('decrement test', 5, 5, function (err, data) {
+    assert.ok(err == null);
+
+    assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+    assert.ok(data.header.opcode == redis.protocol.opcode.DECREMENT);
+
+    client.get('decrement test', function (err, data) {
+      assert.ok(err == null);
+
+      assert.ok(data.header.status == redis.protocol.status.SUCCESS);
+      assert.ok(data.header.opcode == redis.protocol.opcode.GET);
+      assert.ok(data.val.toString() == 4);
+    });
+
+    setTimeout(function() {
+      client.get('decrement test', function (err, data) {
+        assert.ok(err != null);
+
+        assert.ok(err.header.status == redis.protocol.status.KEY_ENOENT);
+        assert.ok(err.header.opcode == redis.protocol.opcode.GET);
+      });
+    }, 6 * 1000);
+
+  });
+});
+
+// close test
+setTimeout(function() {
+  console.log('quit');
+  client.end();
+}, 10 * 1000);
 
 return;
 
