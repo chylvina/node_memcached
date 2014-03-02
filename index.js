@@ -85,32 +85,44 @@ function RedisClient(stream, options) {
   var self = this;
 
   this.stream.on("connect", function () {
-    console.log('event: connect');
+    if (exports.debug_mode) {
+      console.log('event: connect');
+    }
     self.on_connect();
   });
 
   this.stream.on("data", function (buffer_from_socket) {
-    console.log('event: data');
+    if (exports.debug_mode) {
+      console.log('event: data');
+    }
     self.on_data(buffer_from_socket);
   });
 
   this.stream.on("error", function (msg) {
-    console.log('event: error');
+    if (exports.debug_mode) {
+      console.log('event: error');
+    }
     self.on_error(msg.message);
   });
 
   this.stream.on("close", function () {
-    console.log('event: close');
+    if (exports.debug_mode) {
+      console.log('event: close');
+    }
     self.connection_gone("close");
   });
 
   this.stream.on("end", function () {
-    console.log('event: end');
+    if (exports.debug_mode) {
+      console.log('event: end');
+    }
     self.connection_gone("end");
   });
 
   this.stream.on("drain", function () {
-    console.log('event: drain');
+    if (exports.debug_mode) {
+      console.log('event: drain');
+    }
     self.should_buffer = false;
     self.emit("drain");
   });

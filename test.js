@@ -14,6 +14,12 @@ var client = redis.createClient(PORT, HOST, {
   password: password
 });
 
+// Exit immediately on connection failure, which triggers "exit", below, which fails the test
+client.on("error", function (err) {
+  console.error("client: " + err.stack);
+  process.exit();
+});
+
 /// set test
 client.set('hello', 'world', function (err, data) {
   assert.ok(err == null);
@@ -38,13 +44,13 @@ client.set('set expiration test', 'set value', 5, function (err, data) {
   assert.ok(data.header.status == redis.protocol.status.SUCCESS);
   assert.ok(data.header.opcode == redis.protocol.opcode.SET);
 
-  setTimeout(function() {
+  setTimeout(function () {
     client.get('set expiration test', function (err, data) {
       assert.ok(err != null);
 
       assert.ok(err.header.status == redis.protocol.status.KEY_ENOENT);
     });
-  }, 6 *1000);
+  }, 6 * 1000);
 });
 
 /// version test
@@ -82,7 +88,7 @@ client.add(temp1, 'add test value', 5, function (err, data) {
   assert.ok(data.header.status == redis.protocol.status.SUCCESS);
   assert.ok(data.header.opcode == redis.protocol.opcode.ADD);
 
-  setTimeout(function() {
+  setTimeout(function () {
     client.get(temp1, function (err, data) {
       assert.ok(err == null);
 
@@ -92,13 +98,13 @@ client.add(temp1, 'add test value', 5, function (err, data) {
     });
   }, 1000);
 
-  setTimeout(function() {
+  setTimeout(function () {
     client.get(temp1, function (err, data) {
       assert.ok(err != null);
 
       assert.ok(err.header.status == redis.protocol.status.KEY_ENOENT);
     });
-  }, 6 *1000);
+  }, 6 * 1000);
 });
 
 /// replace test
@@ -123,14 +129,14 @@ client.set(temp2, 'replace test value', function (err, data) {
     assert.ok(data.header.status == redis.protocol.status.SUCCESS);
     assert.ok(data.header.opcode == redis.protocol.opcode.REPLACE);
 
-    client.get(temp2, function(err, data) {
+    client.get(temp2, function (err, data) {
       assert.ok(err == null);
 
       assert.ok(data.val.toString() == 'replace test new value');
     });
 
-    setTimeout(function() {
-      client.get(temp2, function(err, data) {
+    setTimeout(function () {
+      client.get(temp2, function (err, data) {
         assert.ok(err != null);
 
         assert.ok(err.header.status == redis.protocol.status.KEY_ENOENT);
@@ -222,7 +228,7 @@ client.set('increment test', 1, function (err, data) {
       assert.ok(data.val.toString() == 6);
     });
 
-    setTimeout(function() {
+    setTimeout(function () {
       client.get('increment test', function (err, data) {
         assert.ok(err != null);
 
@@ -255,7 +261,7 @@ client.set('decrement test', 9, function (err, data) {
       assert.ok(data.val.toString() == 4);
     });
 
-    setTimeout(function() {
+    setTimeout(function () {
       client.get('decrement test', function (err, data) {
         assert.ok(err != null);
 
@@ -267,8 +273,9 @@ client.set('decrement test', 9, function (err, data) {
   });
 });
 
+
 // close test
-setTimeout(function() {
+setTimeout(function () {
   console.log('quit');
   client.end();
 }, 10 * 1000);
@@ -895,9 +902,9 @@ tests.SCRIPT_LOAD = function () {
       client.multi([
           ['script', 'load', command]
         ]).exec(function (err, result) {
-        assert.strictEqual(result[0].toString(), commandSha);
-        next(name);
-      });
+          assert.strictEqual(result[0].toString(), commandSha);
+          next(name);
+        });
     });
   });
 };
@@ -927,10 +934,10 @@ tests.CLIENT_LIST = function () {
       client.multi([
           ['client', 'list']
         ]).exec(function (err, result) {
-        console.log(result.toString());
-        checkResult(result);
-        next(name);
-      });
+          console.log(result.toString());
+          checkResult(result);
+          next(name);
+        });
     });
   });
 };
