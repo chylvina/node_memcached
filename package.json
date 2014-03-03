@@ -1,12 +1,11 @@
 {
-  "name": "redis",
-  "version": "0.10.1",
-  "description": "Redis client library",
+  "name": "node_memcached",
+  "version": "0.1.0",
+  "description": "Memcached client library",
   "keywords": [
-    "redis",
-    "database"
+    "memcached"
   ],
-  "author": "Matt Ranney <mjr@ranney.com>",
+  "author": "chylvina <chylvina@gmail.com>",
   "main": "./index.js",
   "scripts": {
     "test": "node ./test.js"
@@ -20,6 +19,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/mranney/node_redis.git"
+    "url": "git@github.com:aliyun-UED/node_memcached.git"
   }
 }
