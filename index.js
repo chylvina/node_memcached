@@ -1,4 +1,3 @@
-
 var net = require("net"),
   util = require("./lib/util"),
   Queue = require("./lib/queue"),
@@ -26,7 +25,7 @@ function trace() {
 
 parsers.push(require("./lib/parser/javascript"));
 
-function RedisClient(stream, options) {
+function MemcachedClient(stream, options) {
   this.stream = stream;
   this.options = options = options || {};
 
@@ -129,10 +128,10 @@ function RedisClient(stream, options) {
 
   events.EventEmitter.call(this);
 }
-util.inherits(RedisClient, events.EventEmitter);
-exports.RedisClient = RedisClient;
+util.inherits(MemcachedClient, events.EventEmitter);
+exports.MemcachedClient = MemcachedClient;
 
-RedisClient.prototype.initialize_retry_vars = function () {
+MemcachedClient.prototype.initialize_retry_vars = function () {
   this.retry_timer = null;
   this.retry_totaltime = 0;
   this.retry_delay = 150;
@@ -140,7 +139,7 @@ RedisClient.prototype.initialize_retry_vars = function () {
   this.attempts = 1;
 };
 
-RedisClient.prototype.unref = function () {
+MemcachedClient.prototype.unref = function () {
   trace("User requesting to unref the connection");
   if (this.connected) {
     trace("unref'ing the socket connection");
@@ -155,7 +154,7 @@ RedisClient.prototype.unref = function () {
 };
 
 // flush offline_queue and command_queue, erroring any items with a callback first
-RedisClient.prototype.flush_and_error = function (message) {
+MemcachedClient.prototype.flush_and_error = function (message) {
   var command_obj, error;
 
   error = new Error(message);
@@ -185,8 +184,8 @@ RedisClient.prototype.flush_and_error = function (message) {
   this.command_queue = new Queue();
 };
 
-RedisClient.prototype.on_error = function (msg) {
-  var message = "Redis connection to " + this.host + ":" + this.port + " failed - " + msg;
+MemcachedClient.prototype.on_error = function (msg) {
+  var message = "Memcached connection to " + this.host + ":" + this.port + " failed - " + msg;
 
   if (this.closing) {
     return;
@@ -207,7 +206,7 @@ RedisClient.prototype.on_error = function (msg) {
   this.connection_gone("error");
 };
 
-RedisClient.prototype.do_auth = function () {
+MemcachedClient.prototype.do_auth = function () {
   var self = this;
 
   if (exports.debug_mode) {
@@ -246,7 +245,7 @@ RedisClient.prototype.do_auth = function () {
   self.send_anyway = false;
 };
 
-RedisClient.prototype.on_connect = function () {
+MemcachedClient.prototype.on_connect = function () {
   if (exports.debug_mode) {
     console.log("Stream connected " + this.host + ":" + this.port + " id " + this.connection_id);
   }
@@ -265,7 +264,9 @@ RedisClient.prototype.on_connect = function () {
 
   if (this.auth_username && this.auth_pass) {
     this.do_auth();
-  } else {
+  }
+  else {
+
     this.emit("connect");
     this.initialize_retry_vars();
 
@@ -277,7 +278,7 @@ RedisClient.prototype.on_connect = function () {
   }
 };
 
-RedisClient.prototype.init_parser = function () {
+MemcachedClient.prototype.init_parser = function () {
   var self = this;
 
   if (this.options.parser) {
@@ -307,7 +308,7 @@ RedisClient.prototype.init_parser = function () {
     return_buffers: self.options.return_buffers || self.options.detect_buffers || false
   });
 
-  // "reply error" is an error sent back by Redis
+  // "reply error" is an error sent back by Memcached
   this.reply_parser.on("reply error", function (reply) {
     if (reply instanceof Error) {
       self.return_error(reply);
@@ -320,11 +321,11 @@ RedisClient.prototype.init_parser = function () {
   });
   // "error" is bad.  Somehow the parser got confused.  It'll try to reset and continue.
   this.reply_parser.on("error", function (err) {
-    self.emit("error", new Error("Redis reply parser error: " + err.stack));
+    self.emit("error", new Error("Memcached reply parser error: " + err.stack));
   });
 };
 
-RedisClient.prototype.on_ready = function () {
+MemcachedClient.prototype.on_ready = function () {
   this.ready = true;
 
   this.send_offline_queue();
@@ -332,7 +333,7 @@ RedisClient.prototype.on_ready = function () {
   this.emit("ready");
 };
 
-RedisClient.prototype.on_info_cmd = function (err, res) {
+MemcachedClient.prototype.on_info_cmd = function (err, res) {
   var self = this, obj = {}, lines, retry_time;
 
   if (err) {
@@ -360,7 +361,7 @@ RedisClient.prototype.on_info_cmd = function (err, res) {
 
   if (!obj.loading || (obj.loading && obj.loading === "0")) {
     if (exports.debug_mode) {
-      console.log("Redis server ready.");
+      console.log("Memcached server ready.");
     }
     this.on_ready();
   } else {
@@ -369,7 +370,7 @@ RedisClient.prototype.on_info_cmd = function (err, res) {
       retry_time = 1000;
     }
     if (exports.debug_mode) {
-      console.log("Redis server still loading, trying again in " + retry_time);
+      console.log("Memcached server still loading, trying again in " + retry_time);
     }
     setTimeout(function () {
       self.ready_check();
@@ -377,7 +378,7 @@ RedisClient.prototype.on_info_cmd = function (err, res) {
   }
 };
 
-RedisClient.prototype.ready_check = function () {
+MemcachedClient.prototype.ready_check = function () {
   var self = this;
 
   if (exports.debug_mode) {
@@ -391,7 +392,7 @@ RedisClient.prototype.ready_check = function () {
   this.send_anyway = false;
 };
 
-RedisClient.prototype.send_offline_queue = function () {
+MemcachedClient.prototype.send_offline_queue = function () {
   var command_obj, buffered_writes = 0;
 
   while (this.offline_queue.length > 0) {
@@ -410,7 +411,7 @@ RedisClient.prototype.send_offline_queue = function () {
   }
 };
 
-RedisClient.prototype.connection_gone = function (why) {
+MemcachedClient.prototype.connection_gone = function (why) {
   var self = this;
 
   // If a retry is already in progress, just let that happen
@@ -419,7 +420,7 @@ RedisClient.prototype.connection_gone = function (why) {
   }
 
   if (exports.debug_mode) {
-    console.warn("Redis connection is gone from " + why + " event.");
+    console.warn("Memcached connection is gone from " + why + " event.");
   }
   this.connected = false;
   this.ready = false;
@@ -442,7 +443,7 @@ RedisClient.prototype.connection_gone = function (why) {
     this.emitted_end = true;
   }
 
-  this.flush_and_error("Redis connection gone from " + why + " event.");
+  this.flush_and_error("Memcached connection gone from " + why + " event.");
 
   // If this is a requested shutdown, then don't retry
   if (this.closing) {
@@ -466,9 +467,9 @@ RedisClient.prototype.connection_gone = function (why) {
 
   if (this.max_attempts && this.attempts >= this.max_attempts) {
     this.retry_timer = null;
-    // TODO - some people need a "Redis is Broken mode" for future commands that errors immediately, and others
+    // TODO - some people need a "Memcached is Broken mode" for future commands that errors immediately, and others
     // want the program to exit.  Right now, we just log, which doesn't really help in either case.
-    console.error("node_redis: Couldn't get Redis connection after " + this.max_attempts + " attempts.");
+    console.error("node_memcached: Couldn't get Memcached connection after " + this.max_attempts + " attempts.");
     return;
   }
 
@@ -486,8 +487,8 @@ RedisClient.prototype.connection_gone = function (why) {
 
     if (self.connect_timeout && self.retry_totaltime >= self.connect_timeout) {
       self.retry_timer = null;
-      // TODO - engage Redis is Broken mode for future commands, or whatever
-      console.error("node_redis: Couldn't get Redis connection after " + self.retry_totaltime + "ms.");
+      // TODO - engage Memcached is Broken mode for future commands, or whatever
+      console.error("node_memcached: Couldn't get Memcached connection after " + self.retry_totaltime + "ms.");
       return;
     }
 
@@ -496,7 +497,7 @@ RedisClient.prototype.connection_gone = function (why) {
   }, this.retry_delay);
 };
 
-RedisClient.prototype.on_data = function (data) {
+MemcachedClient.prototype.on_data = function (data) {
   if (exports.debug_mode) {
     console.log("net read " + this.host + ":" + this.port + " id " + this.connection_id + ": " + data.toString());
   }
@@ -512,7 +513,7 @@ RedisClient.prototype.on_data = function (data) {
   }
 };
 
-RedisClient.prototype.return_error = function (err) {
+MemcachedClient.prototype.return_error = function (err) {
   var command_obj = this.command_queue.shift(), queue_len = this.command_queue.getLength();
 
   if (this.pub_sub_mode === false && queue_len === 0) {
@@ -531,7 +532,7 @@ RedisClient.prototype.return_error = function (err) {
       this.emit("error", callback_err);
     }
   } else {
-    console.log("node_redis: no callback to send error: " + err.message);
+    console.log("node_memcached: no callback to send error: " + err.message);
     this.emit("error", err);
   }
 };
@@ -540,11 +541,11 @@ RedisClient.prototype.return_error = function (err) {
 // if a domain is active, emit the error on the domain, which will serve the same function.
 // put this try/catch in its own function because V8 doesn't optimize this well yet.
 function try_callback(client, callback, reply) {
-  if(protocol.status.SUCCESS !== reply.header.status) {
+  if (protocol.status.SUCCESS !== reply.header.status) {
     try {
       callback(reply);
     }
-    catch(err) {
+    catch (err) {
       if (process.domain) {
         process.domain.emit('error', err);
         process.domain.exit();
@@ -605,7 +606,7 @@ function reply_to_strings(reply) {
   return reply;
 }
 
-RedisClient.prototype.return_reply = function (reply) {
+MemcachedClient.prototype.return_reply = function (reply) {
   var command_obj, len, type, timestamp, argindex, args, queue_len;
 
   command_obj = this.command_queue.shift();
@@ -702,7 +703,7 @@ RedisClient.prototype.return_reply = function (reply) {
     });
     this.emit("monitor", timestamp, args);
   } else {
-    throw new Error("node_redis command queue state error. If you can reproduce this, please report it.");
+    throw new Error("node_memcached command queue state error. If you can reproduce this, please report it.");
   }
 };
 
@@ -716,7 +717,7 @@ function Command(command, args, sub_command, buffer_args, callback) {
   this.callback = callback;
 }
 
-RedisClient.prototype.send_command = function (command, args, callback) {
+MemcachedClient.prototype.send_command = function (command, args, callback) {
   var arg, command_obj, i, il, elem_count, buffer_args, stream = this.stream, command_str = "", buffered_writes = 0, last_arg_type, lcaseCommand;
 
   if (typeof command !== "string") {
@@ -905,7 +906,7 @@ RedisClient.prototype.send_command = function (command, args, callback) {
   return !this.should_buffer;
 };
 
-RedisClient.prototype.pub_sub_command = function (command_obj) {
+MemcachedClient.prototype.pub_sub_command = function (command_obj) {
   var i, key, command, args;
 
   if (this.pub_sub_mode === false && exports.debug_mode) {
@@ -937,7 +938,7 @@ RedisClient.prototype.pub_sub_command = function (command_obj) {
   }
 };
 
-RedisClient.prototype.end = function () {
+MemcachedClient.prototype.end = function () {
   this.stream._events = {};
   this.connected = false;
   this.ready = false;
@@ -976,14 +977,14 @@ commands = ["get", "add", "set", "auth", "quit", "delete", "replace", "increment
 commands.forEach(function (fullCommand) {
   var command = fullCommand.split(' ')[0];
 
-  RedisClient.prototype[command] = function (args, callback) {
+  MemcachedClient.prototype[command] = function (args, callback) {
     if (Array.isArray(args) && typeof callback === "function") {
       return this.send_command(command, args, callback);
     } else {
       return this.send_command(command, to_array(arguments));
     }
   };
-  RedisClient.prototype[command.toUpperCase()] = RedisClient.prototype[command];
+  MemcachedClient.prototype[command.toUpperCase()] = MemcachedClient.prototype[command];
 
   Multi.prototype[command] = function () {
     this.queue.push([command].concat(to_array(arguments)));
@@ -993,7 +994,7 @@ commands.forEach(function (fullCommand) {
 });
 
 // store db in this.select_db to restore it on reconnect
-RedisClient.prototype.select = function (db, callback) {
+MemcachedClient.prototype.select = function (db, callback) {
   var self = this;
 
   this.send_command('select', [db], function (err, res) {
@@ -1007,10 +1008,10 @@ RedisClient.prototype.select = function (db, callback) {
     }
   });
 };
-RedisClient.prototype.SELECT = RedisClient.prototype.select;
+MemcachedClient.prototype.SELECT = MemcachedClient.prototype.select;
 
 // Stash auth for connect and reconnect.  Send immediately if already connected.
-RedisClient.prototype.auth = function () {
+MemcachedClient.prototype.auth = function () {
   var args = to_array(arguments);
 
   this.auth_username = args[0];
@@ -1024,9 +1025,9 @@ RedisClient.prototype.auth = function () {
     this.send_command("auth", args);
   }
 };
-RedisClient.prototype.AUTH = RedisClient.prototype.auth;
+MemcachedClient.prototype.AUTH = MemcachedClient.prototype.auth;
 
-RedisClient.prototype.hmget = function (arg1, arg2, arg3) {
+MemcachedClient.prototype.hmget = function (arg1, arg2, arg3) {
   if (Array.isArray(arg2) && typeof arg3 === "function") {
     return this.send_command("hmget", [arg1].concat(arg2), arg3);
   } else if (Array.isArray(arg1) && typeof arg2 === "function") {
@@ -1035,9 +1036,9 @@ RedisClient.prototype.hmget = function (arg1, arg2, arg3) {
     return this.send_command("hmget", to_array(arguments));
   }
 };
-RedisClient.prototype.HMGET = RedisClient.prototype.hmget;
+MemcachedClient.prototype.HMGET = MemcachedClient.prototype.hmget;
 
-RedisClient.prototype.hmset = function (args, callback) {
+MemcachedClient.prototype.hmset = function (args, callback) {
   var tmp_args, tmp_keys, i, il, key;
 
   if (Array.isArray(args) && typeof callback === "function") {
@@ -1073,7 +1074,7 @@ RedisClient.prototype.hmset = function (args, callback) {
 
   return this.send_command("hmset", args, callback);
 };
-RedisClient.prototype.HMSET = RedisClient.prototype.hmset;
+MemcachedClient.prototype.HMSET = MemcachedClient.prototype.hmset;
 
 Multi.prototype.hmset = function () {
   var args = to_array(arguments), tmp_args;
@@ -1167,18 +1168,18 @@ Multi.prototype.exec = function (callback) {
 };
 Multi.prototype.EXEC = Multi.prototype.exec;
 
-RedisClient.prototype.multi = function (args) {
+MemcachedClient.prototype.multi = function (args) {
   return new Multi(this, args);
 };
-RedisClient.prototype.MULTI = function (args) {
+MemcachedClient.prototype.MULTI = function (args) {
   return new Multi(this, args);
 };
 
 
 // stash original eval method
-var eval_orig = RedisClient.prototype.eval;
+var eval_orig = MemcachedClient.prototype.eval;
 // hook eval with an attempt to evalsha for cached scripts
-RedisClient.prototype.eval = RedisClient.prototype.EVAL = function () {
+MemcachedClient.prototype.eval = MemcachedClient.prototype.EVAL = function () {
   var self = this,
     args = to_array(arguments),
     callback;
@@ -1210,16 +1211,16 @@ RedisClient.prototype.eval = RedisClient.prototype.EVAL = function () {
 exports.createClient = function (port_arg, host_arg, options) {
   var port = port_arg || default_port,
     host = host_arg || default_host,
-    redis_client, net_client;
+    memcached_client, net_client;
 
   net_client = net.createConnection(port, host);
 
-  redis_client = new RedisClient(net_client, options);
+  memcached_client = new MemcachedClient(net_client, options);
 
-  redis_client.port = port;
-  redis_client.host = host;
+  memcached_client.port = port;
+  memcached_client.host = host;
 
-  return redis_client;
+  return memcached_client;
 };
 
 exports.print = function (err, reply) {
