@@ -1,7 +1,7 @@
 var PORT = 11211;
-var HOST = '10.232.4.25';
-var username = 'df15d29a97b211e3';
-var password = '123456_78a1A';
+var HOST = '10.232.4.26';
+var username = '7d4a76f6b9c711e3';
+var password = '123_Jae_ASD';
 
 var memcached = require("../index");
 
@@ -32,7 +32,6 @@ exports.testSet = function (beforeExit, assert) {
       assert.ok(data.header.opcode == memcached.protocol.opcode.GET);
       assert.ok(data.val.toString() == "world");
     });
-
 
     client.set('set expiration test', 'set value', 5, function (err, data) {
       n++;

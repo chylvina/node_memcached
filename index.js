@@ -6,7 +6,7 @@ var net = require("net"),
   crypto = require("crypto"),
   parsers = [], commands,
   connection_id = 0,
-  default_port = 6379,
+  default_port = 11211,
   default_host = "127.0.0.1";
 
 var protocol = require('./protocol');
@@ -1221,6 +1221,10 @@ exports.createClient = function (port_arg, host_arg, options) {
   memcached_client.host = host;
 
   return memcached_client;
+};
+
+exports.createClientFromString = function(s) {
+
 };
 
 exports.print = function (err, reply) {
