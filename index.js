@@ -1225,9 +1225,9 @@ exports.createClient = function (port_arg, host_arg, options) {
 
 exports.print = function (err, reply) {
   if (err) {
-    console.log("Error: " + err);
+    console.log("error: " + err);
   } else {
-    console.log("Reply: " + reply);
+    console.log("success: " + reply);
   }
 };
 
