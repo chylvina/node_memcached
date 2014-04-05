@@ -1,4 +1,4 @@
-var config = require('./../memcached_server_config');
+var config = require('./memcached_server_config');
 
 var PORT = config.PORT;
 var HOST = config.HOST;
