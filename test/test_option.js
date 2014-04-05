@@ -1,7 +1,9 @@
-var PORT = 11211;
-var HOST = '10.232.4.26';
-var username = '7d4a76f6b9c711e3';
-var password = '123_Jae_ASD';
+var config = require('./../memcached_server_config');
+
+var PORT = config.PORT;
+var HOST = config.HOST;
+var username = config.username;
+var password = config.password;
 
 var memcached = require("../index");
 
@@ -31,3 +33,49 @@ exports.testConnect = function (beforeExit, assert) {
   });
 };
 
+exports.testRetryAutomatically = function (beforeExit, assert) {
+  var n = 0;
+  var errorCount = 0;
+  var lostConnectionCount = 0;
+  var connectCount = 0;
+  var readyCount = 0;
+  var retryCount = 0;
+
+  var unReachablePort = 1234;
+  var client = memcached.createClient(unReachablePort, HOST, {
+    username: username,
+    password: password,
+    retry_max_delay: 100,
+    connect_timeout: 100,
+    max_attempts: 2
+  });
+
+  client.on('connect', function () {
+    connectCount++;
+  });
+
+  client.on('ready', function () {
+    readyCount++;
+  });
+
+  client.on('reconnecting', function() {
+    retryCount++;
+  });
+
+  client.on('error', function(err) {
+    errorCount++;
+    if(err == 'lost connection') {
+      lostConnectionCount++;
+      client.end();
+    }
+  });
+
+  // Alternatively, you can use the beforeExit shortcut.
+  beforeExit(function () {
+    assert.equal(3, errorCount);
+    assert.equal(1, lostConnectionCount);
+    assert.equal(0, connectCount);
+    assert.equal(0, readyCount);
+    assert.equal(1, retryCount);
+  });
+};

@@ -17,7 +17,7 @@ var utils = require('./lib/memjs/utils');
 // can set this to true to enable for all connections
 exports.debug_mode = false;
 
-var arraySlice = Array.prototype.slice
+var arraySlice = Array.prototype.slice;
 function trace() {
   if (!exports.debug_mode) return;
   console.log.apply(null, arraySlice.call(arguments))
@@ -77,7 +77,6 @@ function MemcachedClient(stream, options) {
     this.auth_pass = options.password;
   }
   this.parser_module = null;
-  this.selected_db = null;	// save the selected db here, used when reconnecting
 
   this.old_state = null;
 
@@ -127,13 +126,21 @@ function MemcachedClient(stream, options) {
   });
 
   events.EventEmitter.call(this);
+
+  if(self.connect_timeout) {
+    self.stream.setTimeout(self.connect_timeout, function() {
+      self.stream.destroy();
+      if (exports.debug_mode) {
+        console.log('connect to server timeout after:', self.connect_timeout, 'millsecond');
+      }
+    });
+  }
 }
 util.inherits(MemcachedClient, events.EventEmitter);
 exports.MemcachedClient = MemcachedClient;
 
 MemcachedClient.prototype.initialize_retry_vars = function () {
   this.retry_timer = null;
-  this.retry_totaltime = 0;
   this.retry_delay = 150;
   this.retry_backoff = 1.7;
   this.attempts = 1;
@@ -332,14 +339,6 @@ MemcachedClient.prototype.on_ready = function () {
   this.emit("ready");
 };
 
-MemcachedClient.prototype.on_noop_cmd = function (err, res) {
-  if (err) {
-    return self.emit("error", new Error("Ready check failed: " + err.message));
-  }
-
-  this.on_ready();
-};
-
 MemcachedClient.prototype.ready_check = function () {
   var self = this;
 
@@ -349,7 +348,11 @@ MemcachedClient.prototype.ready_check = function () {
 
   this.send_anyway = true;  // secret flag to send_command to send something even if not "ready"
   this.noop(function (err, res) {
-    self.on_noop_cmd(err, res);
+    if (err) {
+      return self.emit("error", new Error("Ready check failed: " + err.message));
+    }
+
+    self.on_ready();
   });
   this.send_anyway = false;
 };
@@ -390,13 +393,11 @@ MemcachedClient.prototype.connection_gone = function (why) {
   if (this.old_state === null) {
     var state = {
       monitoring: this.monitoring,
-      pub_sub_mode: this.pub_sub_mode,
-      selected_db: this.selected_db
+      pub_sub_mode: this.pub_sub_mode
     };
     this.old_state = state;
     this.monitoring = false;
     this.pub_sub_mode = false;
-    this.selected_db = null;
   }
 
   // since we are collapsing end and close, users don't expect to be called twice
@@ -432,6 +433,8 @@ MemcachedClient.prototype.connection_gone = function (why) {
     // TODO - some people need a "Memcached is Broken mode" for future commands that errors immediately, and others
     // want the program to exit.  Right now, we just log, which doesn't really help in either case.
     console.error("node_memcached: Couldn't get Memcached connection after " + this.max_attempts + " attempts.");
+
+    this.emit('error', 'lost connection');
     return;
   }
 
@@ -445,18 +448,41 @@ MemcachedClient.prototype.connection_gone = function (why) {
       console.log("Retrying connection...");
     }
 
-    self.retry_totaltime += self.retry_delay;
-
-    if (self.connect_timeout && self.retry_totaltime >= self.connect_timeout) {
-      self.retry_timer = null;
-      // TODO - engage Memcached is Broken mode for future commands, or whatever
-      console.error("node_memcached: Couldn't get Memcached connection after " + self.retry_totaltime + "ms.");
-      return;
-    }
-
     self.stream.connect(self.port, self.host);
+    if(self.connect_timeout) {
+      self.stream.setTimeout(self.connect_timeout, function() {
+        self.stream.destroy();
+        if (exports.debug_mode) {
+          console.log('connect to server timeout after:', self.connect_timeout, 'millsecond');
+        }
+      });
+    }
     self.retry_timer = null;
   }, this.retry_delay);
+};
+
+MemcachedClient.prototype.reconnect = function () {
+  if(this.connected) return;
+
+  var self = this;
+
+  self.emit("reconnecting");
+
+  if (exports.debug_mode) {
+    console.log("Retrying connection...");
+  }
+
+  // if we still can not connect to server here, will NOT reconnect automatically
+  // because this.attempts >= this.max_attempts)
+  self.stream.connect(self.port, self.host);
+  if(self.connect_timeout) {
+    self.stream.setTimeout(self.connect_timeout, function() {
+      self.stream.destroy();
+      if (exports.debug_mode) {
+        console.log('connect to server timeout after:', self.connect_timeout, 'millsecond');
+      }
+    });
+  }
 };
 
 MemcachedClient.prototype.on_data = function (data) {
@@ -712,14 +738,8 @@ MemcachedClient.prototype.send_command = function (command, args, callback) {
 
   if (callback && process.domain) callback = process.domain.bind(callback);
 
-  // if the last argument is an array and command is sadd or srem, expand it out:
-  //     client.sadd(arg1, [arg2, arg3, arg4], cb);
-  //  converts to:
-  //     client.sadd(arg1, arg2, arg3, arg4, cb);
-  lcaseCommand = command.toLowerCase();
-
   // if the value is undefined or null and command is set or setx, need not to send message to redis
-  if (command === 'set' || command === 'setex') {
+  if (command === 'set') {
     if (args[args.length - 1] === undefined || args[args.length - 1] === null) {
       var err = new Error('send_command: ' + command + ' value must not be undefined or null');
       return callback && callback(err);
@@ -762,8 +782,6 @@ MemcachedClient.prototype.send_command = function (command, args, callback) {
 
   this.command_queue.push(command_obj);
   this.commands_sent += 1;
-
-  elem_count = args.length + 1;
 
   var buf;
   var extras;
@@ -953,23 +971,6 @@ commands.forEach(function (fullCommand) {
   };
   Multi.prototype[command.toUpperCase()] = Multi.prototype[command];
 });
-
-// store db in this.select_db to restore it on reconnect
-MemcachedClient.prototype.select = function (db, callback) {
-  var self = this;
-
-  this.send_command('select', [db], function (err, res) {
-    if (err === null) {
-      self.selected_db = db;
-    }
-    if (typeof(callback) === 'function') {
-      callback(err, res);
-    } else if (err) {
-      self.emit('error', err);
-    }
-  });
-};
-MemcachedClient.prototype.SELECT = MemcachedClient.prototype.select;
 
 // Stash auth for connect and reconnect.  Send immediately if already connected.
 MemcachedClient.prototype.auth = function () {
@@ -1167,7 +1168,6 @@ MemcachedClient.prototype.eval = MemcachedClient.prototype.EVAL = function () {
     }
   });
 };
-
 
 exports.createClient = function (port_arg, host_arg, options) {
   var port = port_arg || default_port,

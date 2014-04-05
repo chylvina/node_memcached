@@ -1,7 +1,9 @@
-var PORT = 11211;
-var HOST = '10.232.4.26';
-var username = '7d4a76f6b9c711e3';
-var password = '123_Jae_ASD';
+var config = require('./../memcached_server_config');
+
+var PORT = config.PORT;
+var HOST = config.HOST;
+var username = config.username;
+var password = config.password;
 
 var memcached = require("../index");
 
@@ -37,7 +39,7 @@ exports.testSet = function (beforeExit, assert) {
       n++;
 
       assert.ok(err == null);
-    
+
       assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
       assert.ok(data.header.opcode == memcached.protocol.opcode.SET);
 
@@ -98,16 +100,16 @@ exports.testAdd = function(beforeExit, assert) {
     n++;
 
     assert.ok(err == null);
-  
+
     assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
     assert.ok(data.header.opcode == memcached.protocol.opcode.ADD);
-    
+
     // add duplicate error test
     client.add(temp, 'world', function (err, data) {
       n++;
 
       assert.ok(err != null);
-    
+
       assert.ok(err.header.status == memcached.protocol.status.KEY_EEXISTS);
       assert.ok(err.header.opcode == memcached.protocol.opcode.ADD);
     });
@@ -181,7 +183,7 @@ exports.testReplace = function(beforeExit, assert) {
 
     client.replace(temp, 'replace test new value', 5, function (err, data) {
       n++;
-      
+
       assert.ok(err == null);
 
       assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
@@ -200,7 +202,7 @@ exports.testReplace = function(beforeExit, assert) {
           n++;
 
           assert.ok(err != null);
-          
+
           assert.ok(err.header.status == memcached.protocol.status.KEY_ENOENT);
 
           client.end();
@@ -221,7 +223,7 @@ exports.testVersion = function(beforeExit, assert) {
     username: username,
     password: password
   });
-  
+
   client.set('delete test', 'delete test value', function (err, data) {
     n++;
 
