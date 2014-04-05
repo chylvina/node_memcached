@@ -235,12 +235,11 @@ MemcachedClient.prototype.do_auth = function () {
     self.emit("connect");
     self.initialize_retry_vars();
 
-    self.on_ready();
-    /*if (self.options.no_ready_check) {
-     self.on_ready();
-     } else {
-     self.ready_check();
-     }*/
+    if (self.options.no_ready_check) {
+      self.on_ready();
+    } else {
+      self.ready_check();
+    }
   });
   self.send_anyway = false;
 };
@@ -333,49 +332,12 @@ MemcachedClient.prototype.on_ready = function () {
   this.emit("ready");
 };
 
-MemcachedClient.prototype.on_info_cmd = function (err, res) {
-  var self = this, obj = {}, lines, retry_time;
-
+MemcachedClient.prototype.on_noop_cmd = function (err, res) {
   if (err) {
     return self.emit("error", new Error("Ready check failed: " + err.message));
   }
 
-  lines = res.toString().split("\r\n");
-
-  lines.forEach(function (line) {
-    var parts = line.split(':');
-    if (parts[1]) {
-      obj[parts[0]] = parts[1];
-    }
-  });
-
-  obj.versions = [];
-  if (obj.redis_version) {
-    obj.redis_version.split('.').forEach(function (num) {
-      obj.versions.push(+num);
-    });
-  }
-
-  // expose info key/vals to users
-  this.server_info = obj;
-
-  if (!obj.loading || (obj.loading && obj.loading === "0")) {
-    if (exports.debug_mode) {
-      console.log("Memcached server ready.");
-    }
-    this.on_ready();
-  } else {
-    retry_time = obj.loading_eta_seconds * 1000;
-    if (retry_time > 1000) {
-      retry_time = 1000;
-    }
-    if (exports.debug_mode) {
-      console.log("Memcached server still loading, trying again in " + retry_time);
-    }
-    setTimeout(function () {
-      self.ready_check();
-    }, retry_time);
-  }
+  this.on_ready();
 };
 
 MemcachedClient.prototype.ready_check = function () {
@@ -386,8 +348,8 @@ MemcachedClient.prototype.ready_check = function () {
   }
 
   this.send_anyway = true;  // secret flag to send_command to send something even if not "ready"
-  this.info(function (err, res) {
-    self.on_info_cmd(err, res);
+  this.noop(function (err, res) {
+    self.on_noop_cmd(err, res);
   });
   this.send_anyway = false;
 };
@@ -831,7 +793,6 @@ MemcachedClient.prototype.send_command = function (command, args, callback) {
     buffered_writes += !stream.write(buf);
   }
   else if (command === "noop") {
-    this.closing = true;
     buf = makeRequestBuffer(protocol.opcode.NO_OP, '', '', '', '');
 
     buffered_writes += !stream.write(buf);
@@ -1223,7 +1184,7 @@ exports.createClient = function (port_arg, host_arg, options) {
   return memcached_client;
 };
 
-exports.createClientFromString = function(s) {
+exports.createClientFromString = function (s) {
 
 };
 
