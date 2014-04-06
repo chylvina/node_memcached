@@ -19,11 +19,14 @@ exports.testConnect = function (beforeExit, assert) {
 
   client.on('connect', function () {
     n++;
+    
+    assert.ok(client.connected == true);
   });
 
   client.on('ready', function () {
     n++;
 
+    assert.ok(client.ready == true);
     client.end();
   });
 
