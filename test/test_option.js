@@ -45,8 +45,8 @@ exports.testRetryAutomatically = function (beforeExit, assert) {
   var client = memcached.createClient(unReachablePort, HOST, {
     username: username,
     password: password,
-    retry_max_delay: 100,
-    connect_timeout: 100,
+    retry_max_delay: 1000,
+    connect_timeout: 1000,
     max_attempts: 2
   });
 
@@ -72,7 +72,7 @@ exports.testRetryAutomatically = function (beforeExit, assert) {
 
   // Alternatively, you can use the beforeExit shortcut.
   beforeExit(function () {
-    assert.equal(3, errorCount);
+    assert.equal(2, errorCount);
     assert.equal(1, lostConnectionCount);
     assert.equal(0, connectCount);
     assert.equal(0, readyCount);

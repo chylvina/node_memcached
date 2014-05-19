@@ -153,7 +153,7 @@ exports.testAdd = function(beforeExit, assert) {
   beforeExit(function () {
     assert.equal(5, n);
   });
-}
+};
 
 exports.testReplace = function(beforeExit, assert) {
   var n = 0;
@@ -163,10 +163,11 @@ exports.testReplace = function(beforeExit, assert) {
     password: password
   });
 
-  var temp = (new Date).getTime() + 'replace';
+  var temp = (new Date).getTime() + 'replace' + Math.random();
   client.replace(temp, 'replace test value', function (err, data) {
     n++;
 
+    console.log('------', temp);
     assert.ok(err != null);
 
     assert.ok(err.header.status == memcached.protocol.status.KEY_ENOENT);

@@ -349,7 +349,7 @@ MemcachedClient.prototype.ready_check = function () {
   this.send_anyway = true;  // secret flag to send_command to send something even if not "ready"
   this.noop(function (err, res) {
     if (err) {
-      return self.emit("error", new Error("Ready check failed: " + err.message));
+      return self.emit("error", new Error("Ready check failed, the status code: " + res.header.status));
     }
 
     self.on_ready();
@@ -486,9 +486,9 @@ MemcachedClient.prototype.reconnect = function () {
 };
 
 MemcachedClient.prototype.on_data = function (data) {
-  if (exports.debug_mode) {
+/*  if (exports.debug_mode) {
     console.log("net read " + this.host + ":" + this.port + " id " + this.connection_id + ": " + data.toString());
-  }
+  }*/
 
   try {
     this.reply_parser.execute(data);
@@ -531,6 +531,7 @@ MemcachedClient.prototype.return_error = function (err) {
 function try_callback(client, callback, reply) {
   if (protocol.status.SUCCESS !== reply.header.status) {
     try {
+      //callback('memcached server error code: ' + reply.header.status);
       callback(reply);
     }
     catch (err) {
@@ -602,7 +603,8 @@ MemcachedClient.prototype.return_reply = function (reply) {
   if (command_obj) {
     if (typeof command_obj.callback === "function") {
       try_callback(this, command_obj.callback, reply);
-    } else if (exports.debug_mode) {
+    }
+    else if (exports.debug_mode) {
       console.log("no callback for reply: " + (reply && reply.toString && reply.toString()));
     }
   }

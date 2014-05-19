@@ -1,6 +1,6 @@
 var PORT = 11211;
 var HOST = '10.232.4.26';
-var username = '7d4a76f6b9c711e3';
+var username = '8ef0266ada9e11e3';
 var password = '123_Jae_ASD';
 
 var memcached = require("../index");
@@ -13,7 +13,8 @@ var createClient = function() {
     password: password,
     retry_max_delay: 1000,
     connect_timeout: 1000,
-    max_attempts: 2
+    max_attempts: 2,
+    no_ready_check: true
   });
 
   var reconnecting = false;
@@ -29,6 +30,9 @@ var createClient = function() {
         client.reconnect();
       }, 1000 * 10);
     }
+    else {
+      console.log(err);
+    }
   });
 
   client.on('ready', function() {
@@ -37,6 +41,22 @@ var createClient = function() {
       console.log('reconnect success');
     }
 
+  });
+
+  client.set('hello', 'world', function (err, data) {
+    if(err) {
+      console.log('error:', err);
+    }
+
+    console.log('success:', data);
+  });
+
+  client.noop(function(err, data) {
+    if(err) {
+      console.log('error:', err);
+    }
+
+    console.log('success:', data);
   });
 
   return client;
