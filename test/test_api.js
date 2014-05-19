@@ -167,7 +167,6 @@ exports.testReplace = function(beforeExit, assert) {
   client.replace(temp, 'replace test value', function (err, data) {
     n++;
 
-    console.log('------', temp);
     assert.ok(err != null);
 
     assert.ok(err.header.status == memcached.protocol.status.KEY_ENOENT);
