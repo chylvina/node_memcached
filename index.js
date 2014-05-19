@@ -83,44 +83,26 @@ function MemcachedClient(stream, options) {
   var self = this;
 
   this.stream.on("connect", function () {
-    if (exports.debug_mode) {
-      console.log('event: connect');
-    }
     self.on_connect();
   });
 
   this.stream.on("data", function (buffer_from_socket) {
-    if (exports.debug_mode) {
-      console.log('event: data');
-    }
     self.on_data(buffer_from_socket);
   });
 
   this.stream.on("error", function (msg) {
-    if (exports.debug_mode) {
-      console.log('event: error');
-    }
     self.on_error(msg.message);
   });
 
   this.stream.on("close", function () {
-    if (exports.debug_mode) {
-      console.log('event: close');
-    }
     self.connection_gone("close");
   });
 
   this.stream.on("end", function () {
-    if (exports.debug_mode) {
-      console.log('event: end');
-    }
     self.connection_gone("end");
   });
 
   this.stream.on("drain", function () {
-    if (exports.debug_mode) {
-      console.log('event: drain');
-    }
     self.should_buffer = false;
     self.emit("drain");
   });
