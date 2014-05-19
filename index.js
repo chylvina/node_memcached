@@ -83,26 +83,44 @@ function MemcachedClient(stream, options) {
   var self = this;
 
   this.stream.on("connect", function () {
+    if (exports.debug_mode) {
+      console.log('event: connect');
+    }
     self.on_connect();
   });
 
   this.stream.on("data", function (buffer_from_socket) {
+    if (exports.debug_mode) {
+      console.log('event: data');
+    }
     self.on_data(buffer_from_socket);
   });
 
   this.stream.on("error", function (msg) {
+    if (exports.debug_mode) {
+      console.log('event: error');
+    }
     self.on_error(msg.message);
   });
 
   this.stream.on("close", function () {
+    if (exports.debug_mode) {
+      console.log('event: close');
+    }
     self.connection_gone("close");
   });
 
   this.stream.on("end", function () {
+    if (exports.debug_mode) {
+      console.log('event: end');
+    }
     self.connection_gone("end");
   });
 
   this.stream.on("drain", function () {
+    if (exports.debug_mode) {
+      console.log('event: drain');
+    }
     self.should_buffer = false;
     self.emit("drain");
   });
@@ -468,9 +486,9 @@ MemcachedClient.prototype.reconnect = function () {
 };
 
 MemcachedClient.prototype.on_data = function (data) {
-/*  if (exports.debug_mode) {
-    console.log("net read " + this.host + ":" + this.port + " id " + this.connection_id + ": " + data.toString());
-  }*/
+  /*  if (exports.debug_mode) {
+   console.log("net read " + this.host + ":" + this.port + " id " + this.connection_id + ": " + data.toString());
+   }*/
 
   try {
     this.reply_parser.execute(data);
@@ -511,6 +529,24 @@ MemcachedClient.prototype.return_error = function (err) {
 // if a domain is active, emit the error on the domain, which will serve the same function.
 // put this try/catch in its own function because V8 doesn't optimize this well yet.
 function try_callback(client, callback, reply) {
+  if (protocol.status.KEY_ENOENT === reply.header.status) {
+    try {
+      reply.code = 'ENOENT';
+      //callback('memcached server error code: ' + reply.header.status);
+      callback(reply);
+    }
+    catch (err) {
+      if (process.domain) {
+        process.domain.emit('error', err);
+        process.domain.exit();
+      } else {
+        client.emit("error", err);
+      }
+    }
+
+    return;
+  }
+
   if (protocol.status.SUCCESS !== reply.header.status) {
     try {
       //callback('memcached server error code: ' + reply.header.status);
