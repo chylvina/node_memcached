@@ -1,6 +1,6 @@
 exports = module.exports = {
   PORT: 11211,
-  HOST: '10.232.4.26',
-  username: '8ef0266ada9e11e3',
-  password: '123_Jae_ASD'
+  HOST: '127.0.0.1',
+  username: 'memcached',
+  password: '123456'
 };

@@ -1,7 +1,7 @@
 var PORT = 11211;
-var HOST = '10.232.4.26';
-var username = '8ef0266ada9e11e3';
-var password = '123_Jae_ASD';
+var HOST = '127.0.0.1';
+var username = 'memcached';
+var password = '123456';
 
 var memcached = require("../index");
 
