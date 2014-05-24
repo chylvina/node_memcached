@@ -9,8 +9,8 @@ memcached.debug_mode = true;
 
 var createClient = function() {
   var client = memcached.createClient(PORT, HOST, {
-    username: username,
-    password: password,
+    // username: username,
+    // password: password,
     retry_max_delay: 1000,
     connect_timeout: 1000,
     max_attempts: 2,
@@ -22,13 +22,13 @@ var createClient = function() {
   client.on('error', function (err) {
     if(err == 'lost connection') {
       if(memcached.debug_mode) {
-        console.log('will reconnect manually after 10 sec...');
+        console.log('will reconnect manually after 3 sec...');
       }
 
       reconnecting = true;
       setTimeout(function() {
         client.reconnect();
-      }, 1000 * 10);
+      }, 1000 * 3);
     }
     else {
       console.log(err);
@@ -40,7 +40,6 @@ var createClient = function() {
       reconnecting = false;
       console.log('reconnect success');
     }
-
   });
 
   client.set('hello', 'world', function (err, data) {

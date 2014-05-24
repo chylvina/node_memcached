@@ -46,7 +46,7 @@ function MemcachedClient(stream, options) {
   this.command_queue = new Queue(); // holds sent commands to de-pipeline them
   this.offline_queue = new Queue(); // holds commands issued but not able to be sent
   this.commands_sent = 0;
-  this.connect_timeout = false;
+  this.connect_timeout = 0;
   if (options.connect_timeout && !isNaN(options.connect_timeout) && options.connect_timeout > 0) {
     this.connect_timeout = +options.connect_timeout;
   }
@@ -97,44 +97,39 @@ function MemcachedClient(stream, options) {
   });
 
   this.stream.on("error", function (msg) {
-    if (exports.debug_mode) {
-      console.log('event: error');
-    }
     self.on_error(msg.message);
   });
 
   this.stream.on("close", function () {
-    if (exports.debug_mode) {
-      console.log('event: close');
-    }
     self.connection_gone("close");
   });
 
-  this.stream.on("end", function () {
-    if (exports.debug_mode) {
-      console.log('event: end');
+  this.stream.on("timeout", function () {
+    if(self.command_queue.length > 0) {
+      self.connection_gone("timeout");
     }
+  });
+
+  this.stream.on("end", function () {
     self.connection_gone("end");
   });
 
   this.stream.on("drain", function () {
-    if (exports.debug_mode) {
-      console.log('event: drain');
-    }
     self.should_buffer = false;
     self.emit("drain");
   });
 
   events.EventEmitter.call(this);
 
-  if(self.connect_timeout) {
+  self.stream.setTimeout(self.connect_timeout);
+/*  if(self.connect_timeout) {
     self.stream.setTimeout(self.connect_timeout, function() {
       self.stream.destroy();
       if (exports.debug_mode) {
         console.log('connect to server timeout after:', self.connect_timeout, 'millsecond');
       }
     });
-  }
+  }*/
 }
 util.inherits(MemcachedClient, events.EventEmitter);
 exports.MemcachedClient = MemcachedClient;
@@ -264,7 +259,7 @@ MemcachedClient.prototype.on_connect = function () {
   if (this.options.socket_nodelay) {
     this.stream.setNoDelay();
   }
-  this.stream.setTimeout(0);
+  // this.stream.setTimeout(0);
 
   this.init_parser();
 
@@ -449,20 +444,25 @@ MemcachedClient.prototype.connection_gone = function (why) {
     }
 
     self.stream.connect(self.port, self.host);
-    if(self.connect_timeout) {
+/*    if(self.connect_timeout) {
       self.stream.setTimeout(self.connect_timeout, function() {
         self.stream.destroy();
         if (exports.debug_mode) {
           console.log('connect to server timeout after:', self.connect_timeout, 'millsecond');
         }
       });
-    }
+    }*/
     self.retry_timer = null;
   }, this.retry_delay);
 };
 
 MemcachedClient.prototype.reconnect = function () {
-  if(this.connected) return;
+  if(this.connected) {
+    if (exports.debug_mode) {
+      console.log("Retrying connect, but this.connected == true.");
+    }
+    return;
+  }
 
   var self = this;
 
@@ -475,14 +475,14 @@ MemcachedClient.prototype.reconnect = function () {
   // if we still can not connect to server here, will NOT reconnect automatically
   // because this.attempts >= this.max_attempts)
   self.stream.connect(self.port, self.host);
-  if(self.connect_timeout) {
+/*  if(self.connect_timeout) {
     self.stream.setTimeout(self.connect_timeout, function() {
       self.stream.destroy();
       if (exports.debug_mode) {
         console.log('connect to server timeout after:', self.connect_timeout, 'millsecond');
       }
     });
-  }
+  }*/
 };
 
 MemcachedClient.prototype.on_data = function (data) {
