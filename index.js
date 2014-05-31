@@ -217,11 +217,11 @@ MemcachedClient.prototype.do_auth = function () {
   self.send_anyway = true;
   self.send_command("auth", [this.auth_username, this.auth_pass], function (err, res) {
     if (err) {
-      return self.emit("error", new Error("Auth error: the status code: " + err.header.status));
+      return self.emit("error", new Error("Auth error"));
     }
 
     if (res.header.status !== protocol.status.SUCCESS) {
-      return self.emit("error", new Error("Auth failed: the status code: " + res.header.status));
+      return self.emit("error", new Error("Auth failed"));
     }
 
     if (exports.debug_mode) {
@@ -344,7 +344,7 @@ MemcachedClient.prototype.ready_check = function () {
   this.send_anyway = true;  // secret flag to send_command to send something even if not "ready"
   this.noop(function (err, res) {
     if (err) {
-      return self.emit("error", new Error("Ready check failed, the status code: " + res.header.status));
+      return self.emit("error", "Ready check failed");
     }
 
     self.on_ready();
@@ -529,6 +529,16 @@ MemcachedClient.prototype.return_error = function (err) {
 // if a domain is active, emit the error on the domain, which will serve the same function.
 // put this try/catch in its own function because V8 doesn't optimize this well yet.
 function try_callback(client, callback, reply) {
+  if(!reply || !reply.header || reply.header.status == undefined) {
+    if (process.domain) {
+      process.domain.emit('error', 'unknown error');
+      process.domain.exit();
+    } else {
+      client.emit("error", 'unknown error');
+    }
+    return;
+  }
+
   if (protocol.status.KEY_ENOENT === reply.header.status) {
     try {
       reply.code = 'ENOENT';
