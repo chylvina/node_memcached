@@ -90,9 +90,6 @@ function MemcachedClient(stream, options) {
   });
 
   this.stream.on("data", function (buffer_from_socket) {
-    if (exports.debug_mode) {
-      console.log('event: data');
-    }
     self.on_data(buffer_from_socket);
   });
 
@@ -902,13 +899,10 @@ MemcachedClient.prototype.send_command = function (command, args, callback) {
     buffered_writes += !stream.write(buf);
   }
 
-  if (exports.debug_mode) {
-    console.log("send " + this.host + ":" + this.port + " id " + this.connection_id + ": " + command_str);
-  }
+  //if (exports.debug_mode) {
+  //  console.log("send " + this.host + ":" + this.port + " id " + this.connection_id + ": " + command_str);
+  //}
 
-  if (exports.debug_mode) {
-    console.log("send_command buffered_writes: " + buffered_writes, " should_buffer: " + this.should_buffer);
-  }
   if (buffered_writes || this.command_queue.getLength() >= this.command_queue_high_water) {
     this.should_buffer = true;
   }
@@ -1227,3 +1221,4 @@ exports.print = function (err, reply) {
 };
 
 exports.protocol = protocol;
+
