@@ -539,8 +539,7 @@ function try_callback(client, callback, reply) {
   if (protocol.status.KEY_ENOENT === reply.header.status) {
     try {
       reply.code = 'ENOENT';
-      //callback('memcached server error code: ' + reply.header.status);
-      callback(reply);
+      callback(null, reply);
     }
     catch (err) {
       if (process.domain) {
