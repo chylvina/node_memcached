@@ -12,27 +12,19 @@ memcached.debug_mode = true;
 exports.testSet = function (beforeExit, assert) {
   var n = 0;
 
-  var client = memcached.createClient(PORT, HOST, {
-    username: username,
-    password: password
-  });
+  var client = memcached.createClient(PORT, HOST, {});
 
   client.set('hello', 'world', function (err, data) {
     n++;
 
     assert.ok(err == null);
 
-    assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-    assert.ok(data.header.opcode == memcached.protocol.opcode.SET);
-
     client.get('hello', function (err, data) {
       n++;
 
       assert.ok(err == null);
 
-      assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-      assert.ok(data.header.opcode == memcached.protocol.opcode.GET);
-      assert.ok(data.val.toString() == "world");
+      assert.ok(data == "world");
     });
 
     client.set('set expiration test', 'set value', 5, function (err, data) {
@@ -40,16 +32,12 @@ exports.testSet = function (beforeExit, assert) {
 
       assert.ok(err == null);
 
-      assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-      assert.ok(data.header.opcode == memcached.protocol.opcode.SET);
-
       setTimeout(function () {
         n++;
 
         client.get('set expiration test', function (err, data) {
-        assert.ok(err != null);
-
-        assert.ok(err.header.status == memcached.protocol.status.KEY_ENOENT);
+          assert.ok(!err);
+          assert.ok(!data);
         });
 
         client.end();
@@ -63,21 +51,15 @@ exports.testSet = function (beforeExit, assert) {
   });
 };
 
-exports.testVersion = function(beforeExit, assert) {
+exports.testVersion = function (beforeExit, assert) {
   var n = 0;
 
-  var client = memcached.createClient(PORT, HOST, {
-    username: username,
-    password: password
-  });
+  var client = memcached.createClient(PORT, HOST, { });
 
   client.version(function (err, data) {
     n++;
 
     assert.ok(err == null);
-
-    assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-    assert.ok(data.header.opcode == memcached.protocol.opcode.VERSION);
 
     client.end();
   });
@@ -85,15 +67,12 @@ exports.testVersion = function(beforeExit, assert) {
   beforeExit(function () {
     assert.equal(1, n);
   });
-}
+};
 
-exports.testAdd = function(beforeExit, assert) {
+exports.testAdd = function (beforeExit, assert) {
   var n = 0;
 
-  var client = memcached.createClient(PORT, HOST, {
-    username: username,
-    password: password
-  });
+  var client = memcached.createClient(PORT, HOST, { });
 
   var temp = (new Date).getTime();
   client.add(temp, 'add test value', function (err, data) {
@@ -101,17 +80,13 @@ exports.testAdd = function(beforeExit, assert) {
 
     assert.ok(err == null);
 
-    assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-    assert.ok(data.header.opcode == memcached.protocol.opcode.ADD);
-
     // add duplicate error test
     client.add(temp, 'world', function (err, data) {
       n++;
 
       assert.ok(err != null);
 
-      assert.ok(err.header.status == memcached.protocol.status.KEY_EEXISTS);
-      assert.ok(err.header.opcode == memcached.protocol.opcode.ADD);
+      assert.ok(err == memcached.protocol.errors[memcached.protocol.status.KEY_EEXISTS]);
     });
   });
 
@@ -122,18 +97,13 @@ exports.testAdd = function(beforeExit, assert) {
 
     assert.ok(err == null);
 
-    assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-    assert.ok(data.header.opcode == memcached.protocol.opcode.ADD);
-
     setTimeout(function () {
       client.get(temp, function (err, data) {
         n++;
 
         assert.ok(err == null);
 
-        assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-        assert.ok(data.header.opcode == memcached.protocol.opcode.GET);
-        assert.ok(data.val.toString() == "add test value");
+        assert.ok(data == "add test value");
       });
     }, 1000);
 
@@ -141,9 +111,8 @@ exports.testAdd = function(beforeExit, assert) {
       client.get(temp, function (err, data) {
         n++;
 
-        assert.ok(err != null);
-
-        assert.ok(err.header.status == memcached.protocol.status.KEY_ENOENT);
+        assert.ok(!err);
+        assert.ok(!data);
 
         client.end();
       });
@@ -155,55 +124,45 @@ exports.testAdd = function(beforeExit, assert) {
   });
 };
 
-exports.testReplace = function(beforeExit, assert) {
+exports.testReplace = function (beforeExit, assert) {
   var n = 0;
 
-  var client = memcached.createClient(PORT, HOST, {
-    username: username,
-    password: password
-  });
+  var client = memcached.createClient(PORT, HOST, { });
 
   var temp = (new Date).getTime() + 'replace' + Math.random();
   client.replace(temp, 'replace test value', function (err, data) {
     n++;
 
-    assert.ok(err != null);
-
-    assert.ok(err.header.status == memcached.protocol.status.KEY_ENOENT);
-    assert.ok(err.header.opcode == memcached.protocol.opcode.REPLACE);
+    assert.ok(!err);
+    assert.ok(!data);
   });
 
   client.set(temp, 'replace test value', function (err, data) {
     n++;
 
     assert.ok(err == null);
-
-    assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-    assert.ok(data.header.opcode == memcached.protocol.opcode.SET);
+    assert.ok(!data);
 
     client.replace(temp, 'replace test new value', 5, function (err, data) {
       n++;
 
       assert.ok(err == null);
-
-      assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-      assert.ok(data.header.opcode == memcached.protocol.opcode.REPLACE);
+      assert.ok(!data);
 
       client.get(temp, function (err, data) {
         n++;
 
         assert.ok(err == null);
 
-        assert.ok(data.val.toString() == 'replace test new value');
+        assert.ok(data == 'replace test new value');
       });
 
       setTimeout(function () {
         client.get(temp, function (err, data) {
           n++;
 
-          assert.ok(err != null);
-
-          assert.ok(err.header.status == memcached.protocol.status.KEY_ENOENT);
+          assert.ok(!err);
+          assert.ok(!data);
 
           client.end();
         });
@@ -214,31 +173,24 @@ exports.testReplace = function(beforeExit, assert) {
   beforeExit(function () {
     assert.equal(5, n);
   });
-}
+};
 
-exports.testVersion = function(beforeExit, assert) {
+exports.testVersion = function (beforeExit, assert) {
   var n = 0;
 
-  var client = memcached.createClient(PORT, HOST, {
-    username: username,
-    password: password
-  });
+  var client = memcached.createClient(PORT, HOST, { });
 
   client.set('delete test', 'delete test value', function (err, data) {
     n++;
 
-    assert.ok(err == null);
-
-    assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-    assert.ok(data.header.opcode == memcached.protocol.opcode.SET);
+    assert.ok(!err);
+    assert.ok(!data);
 
     client.delete('delete test', function (err, data) {
       n++;
 
-      assert.ok(err == null);
-
-      assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-      assert.ok(data.header.opcode == memcached.protocol.opcode.DELETE);
+      assert.ok(!err);
+      assert.ok(!data);
 
       client.end();
     });
@@ -249,7 +201,7 @@ exports.testVersion = function(beforeExit, assert) {
   });
 }
 
-exports.testAppend = function(beforeExit, assert) {
+exports.testAppend = function (beforeExit, assert) {
   var n = 0;
 
   var client = memcached.createClient(PORT, HOST, {
@@ -260,27 +212,20 @@ exports.testAppend = function(beforeExit, assert) {
   client.set('append test', 'append test value', function (err, data) {
     n++;
 
-    assert.ok(err == null);
-
-    assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-    assert.ok(data.header.opcode == memcached.protocol.opcode.SET);
+    assert.ok(!err);
+    assert.ok(!data);
 
     client.append('append test', 'append', function (err, data) {
       n++;
 
-      assert.ok(err == null);
-
-      assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-      assert.ok(data.header.opcode == memcached.protocol.opcode.APPEND);
+      assert.ok(!err);
+      assert.ok(!data);
 
       client.get('append test', function (err, data) {
         n++;
 
         assert.ok(err == null);
-
-        assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-        assert.ok(data.header.opcode == memcached.protocol.opcode.GET);
-        assert.ok(data.val.toString() == "append test valueappend");
+        assert.ok(data == "append test valueappend");
 
         client.end();
       });
@@ -292,37 +237,29 @@ exports.testAppend = function(beforeExit, assert) {
   });
 }
 
-exports.testPrepend = function(beforeExit, assert) {
+exports.testPrepend = function (beforeExit, assert) {
   var n = 0;
 
-  var client = memcached.createClient(PORT, HOST, {
-    username: username,
-    password: password
-  });
+  var client = memcached.createClient(PORT, HOST, { });
 
   client.set('prepend test', 'prepend test value', function (err, data) {
     n++;
 
-    assert.ok(err == null);
-
-    assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-    assert.ok(data.header.opcode == memcached.protocol.opcode.SET);
+    assert.ok(!err);
+    assert.ok(!data);
 
     client.prepend('prepend test', 'prepend', function (err, data) {
       n++;
-      assert.ok(err == null);
 
-      assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-      assert.ok(data.header.opcode == memcached.protocol.opcode.PREPEND);
+      assert.ok(!err);
+      assert.ok(!data);
 
       client.get('prepend test', function (err, data) {
         n++;
 
         assert.ok(err == null);
 
-        assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-        assert.ok(data.header.opcode == memcached.protocol.opcode.GET);
-        assert.ok(data.val.toString() == "prependprepend test value");
+        assert.ok(data == "prependprepend test value");
 
         client.end();
       });
@@ -332,50 +269,39 @@ exports.testPrepend = function(beforeExit, assert) {
   beforeExit(function () {
     assert.equal(3, n);
   });
-}
+};
 
-exports.testIncrement = function(beforeExit, assert) {
+exports.testIncrement = function (beforeExit, assert) {
   var n = 0;
 
-  var client = memcached.createClient(PORT, HOST, {
-    username: username,
-    password: password
-  });
+  var client = memcached.createClient(PORT, HOST, { });
 
   client.set('increment test', 1, function (err, data) {
     n++;
 
-    assert.ok(err == null);
-
-    assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-    assert.ok(data.header.opcode == memcached.protocol.opcode.SET);
+    assert.ok(!err);
+    assert.ok(!data);
 
     client.increment('increment test', 5, 5, function (err, data) {
       n++;
 
-      assert.ok(err == null);
-
-      assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-      assert.ok(data.header.opcode == memcached.protocol.opcode.INCREMENT);
+      assert.ok(!err);
+      assert.ok(!data);
 
       client.get('increment test', function (err, data) {
         n++;
 
         assert.ok(err == null);
 
-        assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-        assert.ok(data.header.opcode == memcached.protocol.opcode.GET);
-        assert.ok(data.val.toString() == 6);
+        assert.ok(data == 6);
       });
 
       setTimeout(function () {
         client.get('increment test', function (err, data) {
           n++;
 
-          assert.ok(err != null);
-
-          assert.ok(err.header.status == memcached.protocol.status.KEY_ENOENT);
-          assert.ok(err.header.opcode == memcached.protocol.opcode.GET);
+          assert.ok(!err);
+          assert.ok(!data);
 
           client.end();
         });
@@ -387,50 +313,39 @@ exports.testIncrement = function(beforeExit, assert) {
   beforeExit(function () {
     assert.equal(4, n);
   });
-}
+};
 
-exports.testDecrement = function(beforeExit, assert) {
+exports.testDecrement = function (beforeExit, assert) {
   var n = 0;
 
-  var client = memcached.createClient(PORT, HOST, {
-    username: username,
-    password: password
-  });
+  var client = memcached.createClient(PORT, HOST, { });
 
   client.set('decrement test', 9, function (err, data) {
     n++;
 
-    assert.ok(err == null);
-
-    assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-    assert.ok(data.header.opcode == memcached.protocol.opcode.SET);
+    assert.ok(!err);
+    assert.ok(!data);
 
     client.decrement('decrement test', 5, 5, function (err, data) {
       n++;
 
-      assert.ok(err == null);
-
-      assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-      assert.ok(data.header.opcode == memcached.protocol.opcode.DECREMENT);
+      assert.ok(!err);
+      assert.ok(!data);
 
       client.get('decrement test', function (err, data) {
         n++;
 
         assert.ok(err == null);
 
-        assert.ok(data.header.status == memcached.protocol.status.SUCCESS);
-        assert.ok(data.header.opcode == memcached.protocol.opcode.GET);
-        assert.ok(data.val.toString() == 4);
+        assert.ok(data == 4);
       });
 
       setTimeout(function () {
         client.get('decrement test', function (err, data) {
           n++;
 
-          assert.ok(err != null);
-
-          assert.ok(err.header.status == memcached.protocol.status.KEY_ENOENT);
-          assert.ok(err.header.opcode == memcached.protocol.opcode.GET);
+          assert.ok(!err);
+          assert.ok(!data);
 
           client.end();
         });
@@ -442,4 +357,4 @@ exports.testDecrement = function(beforeExit, assert) {
   beforeExit(function () {
     assert.equal(4, n);
   });
-}
+};

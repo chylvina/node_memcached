@@ -1,7 +1,5 @@
 var PORT = 11211;
 var HOST = '127.0.0.1';
-var username = 'memcached';
-var password = '123456';
 
 var memcached = require("../index");
 
@@ -9,8 +7,6 @@ memcached.debug_mode = true;
 
 var createClient = function() {
   var client = memcached.createClient(PORT, HOST, {
-    // username: username,
-    // password: password,
     retry_max_delay: 1000,
     connect_timeout: 1000,
     max_attempts: 2,
@@ -45,6 +41,25 @@ var createClient = function() {
   client.set('hello', 'world', function (err, data) {
     if(err) {
       console.log('error:', err);
+      return;
+    }
+
+    console.log('success:', data);
+  });
+
+  client.add('hello', 'again', function (err, data) {
+    if(err) {
+      console.log('error:', err);
+      return;
+    }
+
+    console.log('success:', data);
+  });
+
+  client.get('hello111', function (err, data) {
+    if(err) {
+      console.log('error:', err);
+      return;
     }
 
     console.log('success:', data);
@@ -53,6 +68,53 @@ var createClient = function() {
   client.noop(function(err, data) {
     if(err) {
       console.log('error:', err);
+      return;
+    }
+
+    console.log('success:', data);
+  });
+
+  client.set('number', 2, function (err, data) {
+    if(err) {
+      console.log('error:', err);
+      return;
+    }
+
+    console.log('success:', data);
+  });
+
+
+  client.increment('number', 2, function (err, data) {
+    if(err) {
+      console.log('error:', err);
+      return;
+    }
+
+    console.log('success:', data);
+  });
+
+  client.get('number', function (err, data) {
+    if(err) {
+      console.log('error:', err);
+      return;
+    }
+
+    console.log('success:', data);
+  });
+
+  client.decrement('number', 1, function (err, data) {
+    if(err) {
+      console.log('error:', err);
+      return;
+    }
+
+    console.log('success:', data);
+  });
+
+  client.get('number', function (err, data) {
+    if(err) {
+      console.log('error:', err);
+      return;
     }
 
     console.log('success:', data);

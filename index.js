@@ -527,60 +527,28 @@ MemcachedClient.prototype.return_error = function (err) {
 // put this try/catch in its own function because V8 doesn't optimize this well yet.
 function try_callback(client, callback, reply) {
   if(!reply || !reply.header || reply.header.status == undefined) {
-    if (process.domain) {
-      process.domain.emit('error', 'unknown error');
-      process.domain.exit();
-    } else {
-      client.emit("error", 'unknown error');
-    }
+    client.emit("Internal server error", err);
     return;
   }
 
   if (protocol.status.KEY_ENOENT === reply.header.status) {
-    try {
-      reply.code = 'ENOENT';
-      callback(null, reply);
+    if(reply.header.opcode == protocol.opcode.GET) {
+      callback(null);
+      return;
     }
-    catch (err) {
-      if (process.domain) {
-        process.domain.emit('error', err);
-        process.domain.exit();
-      } else {
-        client.emit("error", err);
-      }
-    }
-
-    return;
   }
 
   if (protocol.status.SUCCESS !== reply.header.status) {
-    try {
-      //callback('memcached server error code: ' + reply.header.status);
-      callback(reply);
+    if(protocol.errors[reply.header.status]) {
+      callback(protocol.errors[reply.header.status]);
     }
-    catch (err) {
-      if (process.domain) {
-        process.domain.emit('error', err);
-        process.domain.exit();
-      } else {
-        client.emit("error", err);
-      }
+    else {
+      callback('Unknown error');
     }
-
     return;
   }
 
-  try {
-    callback(null, reply);
-  }
-  catch (err) {
-    if (process.domain) {
-      process.domain.emit('error', err);
-      process.domain.exit();
-    } else {
-      client.emit("error", err);
-    }
-  }
+  callback(null, reply.val.toString());
 }
 
 // hgetall converts its replies to an Object.  If the reply is empty, null is returned.
@@ -886,14 +854,14 @@ MemcachedClient.prototype.send_command = function (command, args, callback) {
   else if (command === "increment") {
     extras = utils.makeAmountInitialAndExpiration(args[1], 0, (args[2] || this.options.expires));
 
-    buf = makeRequestBuffer(protocol.opcode.INCREMENT, args[0], extras, args[1].toString(), '');
+    buf = makeRequestBuffer(protocol.opcode.INCREMENT, args[0], extras, '', '');
 
     buffered_writes += !stream.write(buf);
   }
   else if (command === "decrement") {
     extras = utils.makeAmountInitialAndExpiration(args[1], 0, (args[2] || this.options.expires));
 
-    buf = makeRequestBuffer(protocol.opcode.DECREMENT, args[0], extras, args[1].toString(), '');
+    buf = makeRequestBuffer(protocol.opcode.DECREMENT, args[0], extras, '', '');
 
     buffered_writes += !stream.write(buf);
   }
