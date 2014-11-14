@@ -149,3 +149,86 @@ describe('#replace()', function () {
     });
   });
 });
+
+describe('#append()', function () {
+
+  it('should work', function (done) {
+    var temp = (new Date).getTime();
+    client.set(temp, 'append test value', function (err, data) {
+      should.not.exist(err);
+
+      client.get(temp, function (err, data) {
+        should.not.exist(err);
+        should(data).eql("append test value");
+
+        client.append(temp, 'append', function (err, data) {
+          should.not.exist(err);
+
+          client.get(temp, function (err, data) {
+            should.not.exist(err);
+            should(data).eql("append test valueappend");
+
+            done();
+          });
+        });
+      });
+    });
+  });
+});
+
+describe('#prepend()', function () {
+
+  it('should work', function (done) {
+    var temp = (new Date).getTime();
+    client.set(temp, 'prepend test value', function (err, data) {
+      should.not.exist(err);
+
+      client.get(temp, function (err, data) {
+         should(data).eql("prepend test value");
+
+        client.prepend(temp, 'prepend', function (err, data) {
+          should.not.exist(err);
+
+          client.get(temp, function (err, data) {
+            should.not.exist(err);
+            should(data).eql("prependprepend test value");
+
+            done();
+          });
+        });
+      });
+    });
+  });
+});
+
+describe('#increment()', function () {
+
+  it('should work', function (done) {
+    client.set('increment test', 1, function (err, data) {
+      should.not.exist(err);
+
+      client.increment('increment test', 5, 2, function (err, data) {
+        should.not.exist(err);
+
+        client.get('increment test', function (err, data) {
+          should.not.exist(err);
+          should(data).eql('6');
+        });
+
+        setTimeout(function () {
+          client.get('increment test', function (err, data) {
+            should.not.exist(err);
+            should(data).eql('6');
+          });
+        }, 1000);
+
+        setTimeout(function () {
+          client.get('increment test', function (err, data) {
+            should.not.exist(err);
+            should.not.exist(data);
+          });
+        }, 3000);
+      });
+    });
+  });
+});
