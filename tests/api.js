@@ -204,26 +204,27 @@ describe('#prepend()', function () {
 describe('#increment()', function () {
 
   it('should work', function (done) {
-    client.set('increment test', 1, function (err, data) {
+    var temp = (new Date).getTime();
+    client.set(temp, 1, function (err, data) {
       should.not.exist(err);
 
-      client.increment('increment test', 5, 2, function (err, data) {
+      client.increment(temp, 5, 2, function (err, data) {
         should.not.exist(err);
 
-        client.get('increment test', function (err, data) {
+        client.get(temp, function (err, data) {
           should.not.exist(err);
           should(data).eql('6');
         });
 
         setTimeout(function () {
-          client.get('increment test', function (err, data) {
+          client.get(temp, function (err, data) {
             should.not.exist(err);
             should(data).eql('6');
           });
         }, 1000);
 
         setTimeout(function () {
-          client.get('increment test', function (err, data) {
+          client.get(temp, function (err, data) {
             should.not.exist(err);
             should.not.exist(data);
           });
