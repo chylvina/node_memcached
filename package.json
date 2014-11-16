@@ -18,5 +18,8 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:aliyun-UED/node_memcached.git"
+  },
+  "dependencies": {
+    "benchmark": "^1.0.0"
   }
 }

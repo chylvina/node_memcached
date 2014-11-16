@@ -205,7 +205,7 @@ describe('#increment()', function () {
 
   it('should work', function (done) {
     var temp = (new Date).getTime();
-    client.set(temp, 1, function (err, data) {
+    client.set(temp, 1, 3, function (err, data) {
       should.not.exist(err);
 
       client.increment(temp, 5, 2, function (err, data) {
@@ -214,21 +214,51 @@ describe('#increment()', function () {
         client.get(temp, function (err, data) {
           should.not.exist(err);
           should(data).eql('6');
+          done();
         });
 
-        setTimeout(function () {
-          client.get(temp, function (err, data) {
-            should.not.exist(err);
-            should(data).eql('6');
-          });
-        }, 1000);
+      });
+    });
+  });
+});
 
-        setTimeout(function () {
-          client.get(temp, function (err, data) {
-            should.not.exist(err);
-            should.not.exist(data);
-          });
-        }, 3000);
+describe('#decrement()', function () {
+
+  it('should work', function (done) {
+    var temp = (new Date).getTime();
+    client.set(temp, 6, 3, function (err, data) {
+      should.not.exist(err);
+
+      client.decrement(temp, 5, 2, function (err, data) {
+        should.not.exist(err);
+
+        client.get(temp, function (err, data) {
+          should.not.exist(err);
+          should(data).eql('1');
+          done();
+        });
+
+      });
+    });
+  });
+});
+
+describe('#delete()', function () {
+
+  it('should work', function (done) {
+    var temp = (new Date).getTime();
+    client.set(temp, 'delete test value', function (err, data) {
+
+      should.not.exist(err);
+
+      client.delete(temp, function (err, data) {
+        should.not.exist(err);
+
+        client.get(temp, function(err, data) {
+          should.not.exist(err);
+          should.not.exist(data);
+          done();
+        });
       });
     });
   });
