@@ -23,9 +23,6 @@ function MemcachedClient(stream, options) {
   this.connection_id = ++connection_id;
   this.connected = false;
   this.ready = false;
-  if (this.options.socket_nodelay === undefined) {
-    this.options.socket_nodelay = true;
-  }
   this.should_buffer = false;
   this.command_queue_high_water = this.options.command_queue_high_water || 1000;
   this.command_queue_low_water = this.options.command_queue_low_water || 0;
@@ -36,7 +33,6 @@ function MemcachedClient(stream, options) {
   this.command_queue = new Queue(); // holds sent commands to de-pipeline them
   this.offline_queue = new Queue(); // holds commands issued but not able to be sent
   this.commands_sent = 0;
-
   if (options.expires === undefined) {
     options.expires = 0;
   }
@@ -50,9 +46,6 @@ function MemcachedClient(stream, options) {
   }
 
   this.initialize_retry_vars();
-  this.pub_sub_mode = false;
-  this.subscription_set = {};
-  this.monitoring = false;
   this.closing = false;
   this.server_info = {};
   this.auth_username = null;
@@ -64,8 +57,6 @@ function MemcachedClient(stream, options) {
     this.auth_pass = options.password;
   }
   this.parser_module = null;
-
-  this.old_state = null;
 
   var self = this;
 
@@ -86,12 +77,6 @@ function MemcachedClient(stream, options) {
     self.connection_gone("close");
   });
 
-  this.stream.on("timeout", function () {
-    if (self.command_queue.length > 0) {
-      self.connection_gone("timeout");
-    }
-  });
-
   this.stream.on("end", function () {
     self.connection_gone("end");
   });
@@ -102,17 +87,6 @@ function MemcachedClient(stream, options) {
   });
 
   events.EventEmitter.call(this);
-
-  // todo: handle this
-  self.stream.setTimeout(self.connect_timeout);
-  /*  if(self.connect_timeout) {
-   self.stream.setTimeout(self.connect_timeout, function() {
-   self.stream.destroy();
-   if (exports.debug_mode) {
-   console.log('connect to server timeout after:', self.connect_timeout, 'millsecond');
-   }
-   });
-   }*/
 }
 util.inherits(MemcachedClient, events.EventEmitter);
 exports.MemcachedClient = MemcachedClient;
@@ -216,11 +190,7 @@ MemcachedClient.prototype.do_auth = function () {
     self.emit("connect");
     self.initialize_retry_vars();
 
-    if (self.options.no_ready_check) {
-      self.on_ready();
-    } else {
-      self.ready_check();
-    }
+    self.ready_check();
   });
   self.send_anyway = false;
 };
@@ -232,10 +202,9 @@ MemcachedClient.prototype.on_connect = function () {
   this.ready = false;
   this.command_queue = new Queue();
   this.emitted_end = false;
-  if (this.options.socket_nodelay) {
-    this.stream.setNoDelay();
-  }
-  // this.stream.setTimeout(0);
+  this.stream.setNoDelay();
+  this.stream.setKeepAlive(true);
+  this.stream.setTimeout(0);
 
   this.init_parser();
 
@@ -247,11 +216,7 @@ MemcachedClient.prototype.on_connect = function () {
     this.emit("connect");
     this.initialize_retry_vars();
 
-    if (this.options.no_ready_check) {
-      this.on_ready();
-    } else {
-      this.ready_check();
-    }
+    this.ready_check();
   }
 };
 
@@ -265,14 +230,6 @@ MemcachedClient.prototype.init_parser = function () {
   // converts to Strings if the input arguments are not Buffers.
   this.reply_parser = new this.parser_module.Parser({ });
 
-  // "reply error" is an error sent back by Memcached
-  this.reply_parser.on("reply error", function (reply) {
-    if (reply instanceof Error) {
-      self.return_error(reply);
-    } else {
-      self.return_error(new Error(reply));
-    }
-  });
   this.reply_parser.on("reply", function (reply) {
     self.return_reply(reply);
   });
@@ -335,16 +292,6 @@ MemcachedClient.prototype.connection_gone = function (why) {
   this.connected = false;
   this.ready = false;
 
-  if (this.old_state === null) {
-    var state = {
-      monitoring: this.monitoring,
-      pub_sub_mode: this.pub_sub_mode
-    };
-    this.old_state = state;
-    this.monitoring = false;
-    this.pub_sub_mode = false;
-  }
-
   // since we are collapsing end and close, users don't expect to be called twice
   if (!this.emitted_end) {
     this.emit("end");
@@ -388,14 +335,6 @@ MemcachedClient.prototype.connection_gone = function (why) {
     debug("Retrying connection...");
 
     self.stream.connect(self.port, self.host);
-    /*    if(self.connect_timeout) {
-     self.stream.setTimeout(self.connect_timeout, function() {
-     self.stream.destroy();
-     if (exports.debug_mode) {
-     console.log('connect to server timeout after:', self.connect_timeout, 'millsecond');
-     }
-     });
-     }*/
     self.retry_timer = null;
   }, this.retry_delay);
 };
@@ -415,14 +354,6 @@ MemcachedClient.prototype.reconnect = function () {
   // if we still can not connect to server here, will NOT reconnect automatically
   // because this.attempts >= this.max_attempts)
   self.stream.connect(self.port, self.host);
-  /*  if(self.connect_timeout) {
-   self.stream.setTimeout(self.connect_timeout, function() {
-   self.stream.destroy();
-   if (exports.debug_mode) {
-   console.log('connect to server timeout after:', self.connect_timeout, 'millsecond');
-   }
-   });
-   }*/
 };
 
 MemcachedClient.prototype.on_data = function (data) {
@@ -437,30 +368,6 @@ MemcachedClient.prototype.on_data = function (data) {
     // Parser should emit "error" events if it notices things are out of whack.
     // Callbacks that throw exceptions will land in return_reply(), below.
     // TODO - it might be nice to have a different "error" event for different types of errors
-    this.emit("error", err);
-  }
-};
-
-MemcachedClient.prototype.return_error = function (err) {
-  var command_obj = this.command_queue.shift(), queue_len = this.command_queue.getLength();
-
-  if (this.pub_sub_mode === false && queue_len === 0) {
-    this.command_queue = new Queue();
-    this.emit("idle");
-  }
-  if (this.should_buffer && queue_len <= this.command_queue_low_water) {
-    this.emit("drain");
-    this.should_buffer = false;
-  }
-
-  if (command_obj && typeof command_obj.callback === "function") {
-    try {
-      command_obj.callback(err);
-    } catch (callback_err) {
-      this.emit("error", callback_err);
-    }
-  } else {
-    console.log("node_memcached: no callback to send error: " + err.message);
     this.emit("error", err);
   }
 };
