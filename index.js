@@ -204,10 +204,6 @@ MemcachedClient.prototype.do_auth = function () {
       return self.emit("error", new Error("Auth error"));
     }
 
-    if (res.header.status !== protocol.status.SUCCESS) {
-      return self.emit("error", new Error("Auth failed"));
-    }
-
     debug("Auth succeeded " + self.host + ":" + self.port + " id " + self.connection_id);
 
     if (self.auth_callback) {
