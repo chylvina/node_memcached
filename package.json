@@ -20,7 +20,6 @@
     "url": "git@github.com:aliyun-UED/node_memcached.git"
   },
   "dependencies": {
-    "benchmark": "^1.0.0",
     "debug": "^2.1.0"
   }
 }
