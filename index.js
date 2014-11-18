@@ -26,28 +26,17 @@ function MemcachedClient(stream, options) {
   this.should_buffer = false;
   this.command_queue_high_water = this.options.command_queue_high_water || 1000;
   this.command_queue_low_water = this.options.command_queue_low_water || 0;
-  this.max_attempts = null;
-  if (options.max_attempts && !isNaN(options.max_attempts) && options.max_attempts > 0) {
-    this.max_attempts = +options.max_attempts;
-  }
   this.command_queue = new Queue(); // holds sent commands to de-pipeline them
   this.offline_queue = new Queue(); // holds commands issued but not able to be sent
-  this.commands_sent = 0;
-  if (options.expires === undefined) {
-    options.expires = 0;
-  }
+  options.expires = 0;
   this.enable_offline_queue = true;
   if (typeof this.options.enable_offline_queue === "boolean") {
     this.enable_offline_queue = this.options.enable_offline_queue;
   }
-  this.retry_max_delay = null;
-  if (options.retry_max_delay !== undefined && !isNaN(options.retry_max_delay) && options.retry_max_delay > 0) {
-    this.retry_max_delay = options.retry_max_delay;
-  }
 
   this.initialize_retry_vars();
+
   this.closing = false;
-  this.server_info = {};
   this.auth_username = null;
   if (options.username !== undefined) {
     this.auth_username = options.username;
@@ -97,6 +86,7 @@ MemcachedClient.prototype.initialize_retry_vars = function () {
   this.retry_delay = 150;
   this.retry_backoff = 1.7;
   this.attempts = 1;
+  this.retry_max_delay = 60000; // 1 minute
 };
 
 MemcachedClient.prototype.unref = function () {
@@ -175,10 +165,6 @@ MemcachedClient.prototype.do_auth = function () {
       return self.emit("error", new Error("Auth error"));
     }
 
-    if (res.header.status !== protocol.status.SUCCESS) {
-      return self.emit("error", new Error("Auth failed"));
-    }
-
     debug("Auth succeeded " + self.host + ":" + self.port + " id " + self.connection_id);
 
     if (self.auth_callback) {
@@ -240,6 +226,8 @@ MemcachedClient.prototype.init_parser = function () {
 };
 
 MemcachedClient.prototype.on_ready = function () {
+  debug('memcached client is ready.');
+
   this.ready = true;
 
   this.send_offline_queue();
@@ -308,23 +296,14 @@ MemcachedClient.prototype.connection_gone = function (why) {
   }
 
   var nextDelay = Math.floor(this.retry_delay * this.retry_backoff);
-  if (this.retry_max_delay !== null && nextDelay > this.retry_max_delay) {
+  if (nextDelay > this.retry_max_delay) {
     this.retry_delay = this.retry_max_delay;
-  } else {
+  }
+  else {
     this.retry_delay = nextDelay;
   }
 
   debug("Retry connection in " + this.retry_delay + " ms");
-
-  if (this.max_attempts && this.attempts >= this.max_attempts) {
-    this.retry_timer = null;
-    // TODO - some people need a "Memcached is Broken mode" for future commands that errors immediately, and others
-    // want the program to exit.  Right now, we just log, which doesn't really help in either case.
-    console.error("node_memcached: Couldn't get Memcached connection after " + this.max_attempts + " attempts.");
-
-    this.emit('error', 'lost connection');
-    return;
-  }
 
   this.attempts += 1;
   this.emit("reconnecting", {
@@ -496,7 +475,6 @@ MemcachedClient.prototype.send_command = function (command, args, callback) {
   }
 
   this.command_queue.push(command_obj);
-  this.commands_sent += 1;
 
   var buf;
   var extras;

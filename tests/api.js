@@ -6,9 +6,14 @@ var should = require('should');
 
 var PORT = 11211;
 var HOST = '127.0.0.1';
+var username = 'myname';
+var password = 'mypass';
 var memcached = require("../index");
 
-var client = memcached.createClient(PORT, HOST, {});
+var client = memcached.createClient(PORT, HOST, {
+  username: username,
+  password: password
+});
 
 describe('#set()', function () {
   it('should work', function (done) {

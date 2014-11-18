@@ -1,4 +1,0 @@
-exports = module.exports = {
-  PORT: 11211,
-  HOST: '127.0.0.1'
-};
