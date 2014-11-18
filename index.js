@@ -356,7 +356,7 @@ MemcachedClient.prototype.on_data = function (data) {
 // put this try/catch in its own function because V8 doesn't optimize this well yet.
 function try_callback(client, callback, reply) {
   if (!reply || !reply.header || reply.header.status == undefined) {
-    client.emit("Internal server error", err);
+    client.emit("error", "can not pase message");
     return;
   }
 
@@ -377,6 +377,7 @@ function try_callback(client, callback, reply) {
     return;
   }
 
+  console.log(reply);
   callback(null, reply.val.toString());
 }
 
