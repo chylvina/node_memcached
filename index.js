@@ -377,7 +377,6 @@ function try_callback(client, callback, reply) {
     return;
   }
 
-  console.log(reply);
   callback(null, reply.val.toString());
 }
 
