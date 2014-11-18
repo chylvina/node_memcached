@@ -9,6 +9,22 @@ node_memcached
 
     npm install node_memcached
 
+## 从 0.2.x 版本迁移
+
+从 0.2.x 版本迁移的开发者请注意，在所有的命令返回中不再使用 res.val.toString() 得到数据，直接使用即可：
+
+```javascript
+  client.get('key', function(err, res) {
+    // 不要这样
+    console.log(res.val.toString());
+  })
+
+  client.get('key', function(err, res) {
+    // 直接获取数据
+    console.log(res);
+  })
+```
+
 ## 使用方法
 
 ```javascript

@@ -1,6 +1,6 @@
 {
   "name": "node_memcached",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Memcached client library",
   "keywords": [
     "memcached"
@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:aliyun-UED/node_memcached.git"
+    "url": "git@github.com:chylvina/node_memcached.git"
   },
   "dependencies": {
     "debug": "^2.1.0"
