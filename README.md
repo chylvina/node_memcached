@@ -46,7 +46,7 @@ node_memcached
   // 10 为过期时间， 10秒
   client.set('hello', 'world', 10);
 
-  client.get('hello', 'world', function(err, res) {
+  client.get('hello', function(err, res) {
     console.log(err, res);
   });
 
