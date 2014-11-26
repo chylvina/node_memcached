@@ -95,15 +95,6 @@ node_memcached
 
 `client` 会在与 memcached 断开连接后发送 `end` 事件。
 
-### "drain"
-
-`client` will emit `drain` when the TCP connection to the Redis server has been buffering, but is now
-writable.  This event can be used to stream commands in to Redis and adapt to backpressure.  Right now,
-you need to check `client.command_queue.length` to decide when to reduce your send rate.  Then you can
-resume sending when you get `drain`.
-
-`client` 会在与 memcached 服务器连接的 stream 可
-
 ## createClient()
 
 ### 选项
