@@ -18,7 +18,7 @@ client.set('hello', 'world', 10, function(err, res) {
   console.log(err, res);
 });
 
-client.get('hello', 'world', function(err, res) {
+client.get('hello', function(err, res) {
   console.log(err, res);
 });
 
