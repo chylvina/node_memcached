@@ -3,11 +3,12 @@
 var assert = require('assert');
 var _ = require('lodash');
 var should = require('should');
+var config = require('./config');
 
-var PORT = 11211;
-var HOST = '127.0.0.1';
-var username = 'myname';
-var password = 'mypass';
+var PORT = config.port;
+var HOST = config.host;
+var username = config.username;
+var password = config.password;
 var memcached = require("../index");
 
 var client = memcached.createClient(PORT, HOST, {
@@ -41,7 +42,7 @@ describe('#set()', function () {
 
         done();
       });
-    }, 1100);
+    }, 3000);
   });
 });
 
@@ -147,7 +148,7 @@ describe('#replace()', function () {
 
                 done();
               });
-            }, 1100);
+            }, 3000);
           });
         });
       });
