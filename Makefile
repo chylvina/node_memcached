@@ -4,7 +4,7 @@ TIMEOUT = 15000
 MOCHA_OPTS =
 
 install:
-	@tnpm install
+	@npm install
 
 jshint: install
 	@./node_modules/.bin/jshint ./
