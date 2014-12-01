@@ -4,7 +4,6 @@ var net = require("net"),
   to_array = require("./lib/to_array"),
   events = require("events"),
   debug = require('debug')('node_memcached'),
-  transcoder = require('./lib/transcoder'),
   parsers = [], commands,
   connection_id = 0,
   default_port = 11211,
@@ -377,7 +376,8 @@ function try_callback(client, callback, reply) {
     }
     return;
   }
-  callback(null, transcoder.decode(reply));
+
+  callback(null, reply.val.toString());
 }
 
 MemcachedClient.prototype.return_reply = function (reply) {
@@ -501,6 +501,7 @@ MemcachedClient.prototype.send_command = function (command, args, callback) {
     extras = Buffer.concat([new Buffer('00000000', 'hex'), makeExpiration(args[2] || this.options.expires)]);
 
     buf = makeRequestBuffer(protocol.opcode.SET, args[0], extras, args[1].toString(), '');
+
     buffered_writes += !stream.write(buf);
   }
   else if (command === "add") {

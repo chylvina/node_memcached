@@ -1,7 +1,4 @@
 node_modules
 .tern-port
-tests/config/config.js
+
 .idea
-tests/transcoder.test.js
-tests/fixtures/data.json
-tests/config/config-dev.js
